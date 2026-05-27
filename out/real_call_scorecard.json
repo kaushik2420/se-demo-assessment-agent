@@ -1,0 +1,131 @@
+{
+  "call_id": "call_2026_05_avoma_0fb0f744_bts",
+  "se_name": "Ishrath Ahamed",
+  "ae_name": "River England",
+  "prospect_company": "BTS",
+  "prompt_version": "real-2026-05-v1-hand-analyzed",
+  "scores": {
+    "Communication": {
+      "Tone": {
+        "score": 3.5,
+        "evidence": "Warm, patient throughout. 'I've never seen anybody who is able to pick up a product like this quickly\u2026 you cut down basically a lot of my job'",
+        "low_confidence": false
+      },
+      "Engaging Level": {
+        "score": 2.5,
+        "evidence": "Mostly transactional Q&A. Heavy filler ('right?', 'you know'). One nice analogy on multilingual translation ('wear multiple hats' in Spanish)",
+        "low_confidence": false
+      }
+    },
+    "Presentation": {
+      "Relevance": {
+        "score": 3.0,
+        "evidence": "Generally relevant; jumped to his own client's reporting screen mid-flow without warning",
+        "low_confidence": false
+      },
+      "Cohesion": {
+        "score": 2.5,
+        "evidence": "Said 'let's set the agenda now' ~15 minutes into the call, after demo had already begun. End-of-call summary was a long uninterrupted monologue",
+        "low_confidence": false
+      }
+    },
+    "Audience Engagement": {
+      "Personalization": {
+        "score": 4.0,
+        "evidence": "Used names constantly, addressed each attendee individually: 'Mahima, I'm really really glad you brought it up because I missed it'",
+        "low_confidence": false
+      },
+      "Interactivity": {
+        "score": 3.5,
+        "evidence": "Frequent 'any questions Christian?' checks; but mostly reactive \u2014 Christian drove most of the agenda. One real probing question: 'How do you see this getting related to the previous system?'",
+        "low_confidence": false
+      }
+    },
+    "Solution Skills": {
+      "Customization": {
+        "score": 2.0,
+        "evidence": "No prep for BTS specifically \u2014 no BTS logo, no preloaded multi-client demo workspace despite knowing this is the consulting firm's central use case",
+        "low_confidence": false
+      },
+      "Solution-Focused": {
+        "score": 1.5,
+        "evidence": "Subaccount/multi-client feature (the CORE of BTS's use case) came up only at minute ~50 because Mahima asked. Ishrath admitted: 'you brought it up because I missed it'",
+        "low_confidence": false
+      }
+    },
+    "Consultative Approach": {
+      "Proactiveness": {
+        "score": 2.5,
+        "evidence": "Volunteered email integration and SSO options. Did NOT proactively raise multi-client architecture \u2014 the biggest architectural decision for an HR consulting firm",
+        "low_confidence": false
+      },
+      "Recommendations": {
+        "score": 3.0,
+        "evidence": "Clear close: 'I would advise you and the team to try playing around with all the settings and try replicating the similar settings that you had with a different project'",
+        "low_confidence": false
+      },
+      "Highlighting Key Points": {
+        "score": 2.5,
+        "evidence": "End-of-call recap covered ground but was a 3-minute monologue without anchoring 2-3 specific 'today we agreed X' takeaways",
+        "low_confidence": false
+      }
+    },
+    "Touchbase on Pain Points": {
+      "Addressing Pain Points": {
+        "score": 1.5,
+        "evidence": "No discovery questions surfaced. Never asked 'what was the biggest friction with your previous tool?' or 'what does delivering 360s for clients look like today?'",
+        "low_confidence": false
+      },
+      "Solution Understanding": {
+        "score": 2.5,
+        "evidence": "Subaccount answer was strong when it finally came: 'if you have 10 clients, 100 clients in the future\u2026 BTS does not have any friction'. But arrived 50 minutes late",
+        "low_confidence": false
+      }
+    },
+    "Craftsmanship": {
+      "Personalization": {
+        "score": 1.5,
+        "evidence": "Demo env had no BTS branding, no sample BTS consulting-firm data, no client-management workspace pre-staged",
+        "low_confidence": false
+      },
+      "Customization": {
+        "score": 2.0,
+        "evidence": "Pulled up his own existing client example reactively to demonstrate competency instructions instead of pre-staging a BTS-style example",
+        "low_confidence": false
+      }
+    }
+  },
+  "per_criterion_score": {
+    "Communication": 3.0,
+    "Presentation": 2.75,
+    "Audience Engagement": 3.75,
+    "Solution Skills": 1.75,
+    "Consultative Approach": 2.67,
+    "Touchbase on Pain Points": 2.0,
+    "Craftsmanship": 1.75
+  },
+  "weighted_final": 2.29,
+  "industry_percentile": 10,
+  "industry_gaps": {
+    "Communication": -0.8,
+    "Presentation": -0.85,
+    "Audience Engagement": 0.35,
+    "Solution Skills": -1.75,
+    "Consultative Approach": -0.53,
+    "Touchbase on Pain Points": -1.3,
+    "Craftsmanship": -1.25
+  },
+  "qualitative": {
+    "top_3_strengths": [
+      "Exceptional patience and warmth \u2014 created psychological safety for Christian to admit navigation struggles ('I've never seen anybody pick up a product like this quickly' was a beautifully timed reassurance)",
+      "Named every attendee throughout; handled Mahima rejoining mid-call and Aqsa dropping without losing flow",
+      "Closed cleanly with a structured 'here's how you'd actually run this end-to-end' walkthrough that gave the team a mental model for the pilot"
+    ],
+    "top_3_gaps": [
+      "Missed the most important architectural question for an HR consulting firm: subaccount / multi-client management. Mahima had to surface it at minute ~50, and Ishrath openly acknowledged he had missed it. This should have been the opening 10 minutes of the call.",
+      "Zero discovery. Never asked 'what's broken in your current process?' or 'what made you start looking?'. Treated the call as feature-walkthrough, missing the chance to surface competitor name, deal motivation, and decision criteria.",
+      "Demo environment was generic \u2014 no BTS logo, no consulting-firm sample data, no pre-built multi-client workspace. For a hand-holding session with the actual buyers in the room, this is a missed personalization win."
+    ],
+    "one_coaching_action": "Before every BTS interaction from now on, spend 20 minutes pre-call setting up a 'BTS Demo Workspace' that already has: (1) two sample client subaccounts ('Client A', 'Client B') seeded with realistic 360 surveys, (2) BTS logo applied, (3) one approval workflow pre-wired. Open every call by demoing the subaccount switcher \u2014 it's their primary use case, not an afterthought."
+  }
+}

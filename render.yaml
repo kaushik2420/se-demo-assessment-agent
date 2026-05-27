@@ -1,0 +1,43 @@
+# Render Blueprint — one-click deploy for the backend + Postgres.
+# Usage:
+#   1. Push this repo to GitHub
+#   2. In Render dashboard: New → Blueprint → connect your GitHub repo
+#   3. Render reads this file and provisions everything below
+#
+# Required secrets (set in Render dashboard after first deploy):
+#   - ANTHROPIC_API_KEY
+#   - JWT_SECRET
+#   - CORS_ORIGINS (set to your Vercel URL after frontend deploy)
+
+services:
+  - type: web
+    name: se-coach-api
+    runtime: docker
+    dockerfilePath: ./web/backend/Dockerfile
+    dockerContext: .
+    plan: starter          # $7/mo; upgrade to standard if traffic warrants
+    region: singapore      # closest to India / SurveySparrow HQ
+    healthCheckPath: /health
+    autoDeploy: true       # deploys on every push to main
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: se-coach-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false        # set manually in dashboard (secret)
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://se-coach.vercel.app   # update after frontend deploy
+      - key: CLAUDE_MODEL
+        value: claude-sonnet-4-6
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+databases:
+  - name: se-coach-db
+    plan: free             # 90-day expiry on free tier; upgrade to starter ($7/mo) for persistence
+    region: singapore
+    databaseName: se_coach
+    user: se_coach

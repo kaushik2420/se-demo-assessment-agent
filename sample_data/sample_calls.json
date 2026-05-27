@@ -1,0 +1,35 @@
+[
+  {
+    "call_id": "call_2026_05_14_northlane",
+    "se_name": "Arjun Pillai",
+    "se_email": "arjun.pillai@surveysparrow.example",
+    "ae_name": "Priya Menon",
+    "prospect_company": "NorthLane Fintech",
+    "prospect_industry": "Fintech",
+    "stated_use_case": "Renewal-risk early warning via relationship NPS across customer tiers, with CSM workflow alerts",
+    "duration_min": 38,
+    "transcript_file": "sample_transcript.txt"
+  },
+  {
+    "call_id": "call_2026_05_08_eventcorp",
+    "se_name": "Arjun Pillai",
+    "se_email": "arjun.pillai@surveysparrow.example",
+    "ae_name": "Rohit Sharma",
+    "prospect_company": "EventCorp",
+    "prospect_industry": "Events",
+    "stated_use_case": "Post-event satisfaction form with CSV export to internal data warehouse",
+    "duration_min": 22,
+    "transcript_file": "sample_transcript.txt"
+  },
+  {
+    "call_id": "call_2026_05_21_brightcare",
+    "se_name": "Karthik Raman",
+    "se_email": "karthik.raman@surveysparrow.example",
+    "ae_name": "Priya Menon",
+    "prospect_company": "BrightCare Health",
+    "prospect_industry": "Healthcare",
+    "stated_use_case": "Patient journey feedback across appointment, treatment, and follow-up touchpoints with provider-level dashboards",
+    "duration_min": 45,
+    "transcript_file": "sample_transcript.txt"
+  }
+]

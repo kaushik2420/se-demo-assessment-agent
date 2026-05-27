@@ -1,0 +1,395 @@
+[
+  {
+    "call_id": "call_2026_05_14_northlane",
+    "se_name": "Arjun Pillai",
+    "ae_name": "Priya Menon",
+    "prospect_company": "NorthLane Fintech",
+    "prompt_version": "2026-05-v1",
+    "scores": {
+      "Communication": {
+        "Tone": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Tone",
+          "low_confidence": false
+        },
+        "Engaging Level": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Engaging Level",
+          "low_confidence": false
+        }
+      },
+      "Presentation": {
+        "Relevance": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Relevance",
+          "low_confidence": false
+        },
+        "Cohesion": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Cohesion",
+          "low_confidence": false
+        }
+      },
+      "Audience Engagement": {
+        "Personalization": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Personalization",
+          "low_confidence": false
+        },
+        "Interactivity": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Interactivity",
+          "low_confidence": false
+        }
+      },
+      "Solution Skills": {
+        "Customization": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Customization",
+          "low_confidence": false
+        },
+        "Solution-Focused": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Solution-Focused",
+          "low_confidence": false
+        }
+      },
+      "Consultative Approach": {
+        "Proactiveness": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Proactiveness",
+          "low_confidence": false
+        },
+        "Recommendations": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Recommendations",
+          "low_confidence": false
+        },
+        "Highlighting Key Points": {
+          "score": 4.0,
+          "evidence": "[demo] paraphrase of moment relevant to Highlighting Key Points",
+          "low_confidence": false
+        }
+      },
+      "Touchbase on Pain Points": {
+        "Addressing Pain Points": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Addressing Pain Points",
+          "low_confidence": false
+        },
+        "Solution Understanding": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Solution Understanding",
+          "low_confidence": false
+        }
+      },
+      "Craftsmanship": {
+        "Personalization": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Personalization",
+          "low_confidence": false
+        },
+        "Customization": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Customization",
+          "low_confidence": false
+        }
+      }
+    },
+    "per_criterion_score": {
+      "Communication": 3.55,
+      "Presentation": 3.55,
+      "Audience Engagement": 3.55,
+      "Solution Skills": 3.55,
+      "Consultative Approach": 3.7,
+      "Touchbase on Pain Points": 3.55,
+      "Craftsmanship": 3.55
+    },
+    "weighted_final": 3.57,
+    "industry_percentile": 50,
+    "industry_gaps": {
+      "Communication": -0.25,
+      "Presentation": -0.05,
+      "Audience Engagement": 0.15,
+      "Solution Skills": 0.05,
+      "Consultative Approach": 0.5,
+      "Touchbase on Pain Points": 0.25,
+      "Craftsmanship": 0.55
+    },
+    "qualitative": {
+      "top_3_strengths": [
+        "Strong rapport opening \u2014 used prospect's industry-specific anecdote",
+        "Tied dashboards back to renewal-risk outcome the prospect cared about",
+        "Asked confirming question before deep-diving every module"
+      ],
+      "top_3_gaps": [
+        "Drifted into feature tour during 'Workflows' segment (~7 min)",
+        "Did not anchor on the pricing concern raised at minute 4",
+        "Generic demo env \u2014 no prospect logo or vertical data"
+      ],
+      "one_coaching_action": "Before next demo, build a 30-min pre-call ritual: pull prospect's industry KPI, mock dashboard with their logo, scripted bridge from each pain \u2192 specific dashboard."
+    }
+  },
+  {
+    "call_id": "call_2026_05_08_eventcorp",
+    "se_name": "Arjun Pillai",
+    "ae_name": "Rohit Sharma",
+    "prospect_company": "EventCorp",
+    "prompt_version": "2026-05-v1",
+    "scores": {
+      "Communication": {
+        "Tone": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Tone",
+          "low_confidence": false
+        },
+        "Engaging Level": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Engaging Level",
+          "low_confidence": false
+        }
+      },
+      "Presentation": {
+        "Relevance": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Relevance",
+          "low_confidence": false
+        },
+        "Cohesion": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Cohesion",
+          "low_confidence": false
+        }
+      },
+      "Audience Engagement": {
+        "Personalization": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Personalization",
+          "low_confidence": false
+        },
+        "Interactivity": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Interactivity",
+          "low_confidence": false
+        }
+      },
+      "Solution Skills": {
+        "Customization": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Customization",
+          "low_confidence": false
+        },
+        "Solution-Focused": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Solution-Focused",
+          "low_confidence": false
+        }
+      },
+      "Consultative Approach": {
+        "Proactiveness": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Proactiveness",
+          "low_confidence": false
+        },
+        "Recommendations": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Recommendations",
+          "low_confidence": false
+        },
+        "Highlighting Key Points": {
+          "score": 4.0,
+          "evidence": "[demo] paraphrase of moment relevant to Highlighting Key Points",
+          "low_confidence": false
+        }
+      },
+      "Touchbase on Pain Points": {
+        "Addressing Pain Points": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Addressing Pain Points",
+          "low_confidence": false
+        },
+        "Solution Understanding": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Solution Understanding",
+          "low_confidence": false
+        }
+      },
+      "Craftsmanship": {
+        "Personalization": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Personalization",
+          "low_confidence": false
+        },
+        "Customization": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Customization",
+          "low_confidence": false
+        }
+      }
+    },
+    "per_criterion_score": {
+      "Communication": 3.55,
+      "Presentation": 3.55,
+      "Audience Engagement": 3.55,
+      "Solution Skills": 3.55,
+      "Consultative Approach": 3.7,
+      "Touchbase on Pain Points": 3.55,
+      "Craftsmanship": 3.55
+    },
+    "weighted_final": 3.57,
+    "industry_percentile": 50,
+    "industry_gaps": {
+      "Communication": -0.25,
+      "Presentation": -0.05,
+      "Audience Engagement": 0.15,
+      "Solution Skills": 0.05,
+      "Consultative Approach": 0.5,
+      "Touchbase on Pain Points": 0.25,
+      "Craftsmanship": 0.55
+    },
+    "qualitative": {
+      "top_3_strengths": [
+        "Strong rapport opening \u2014 used prospect's industry-specific anecdote",
+        "Tied dashboards back to renewal-risk outcome the prospect cared about",
+        "Asked confirming question before deep-diving every module"
+      ],
+      "top_3_gaps": [
+        "Drifted into feature tour during 'Workflows' segment (~7 min)",
+        "Did not anchor on the pricing concern raised at minute 4",
+        "Generic demo env \u2014 no prospect logo or vertical data"
+      ],
+      "one_coaching_action": "Before next demo, build a 30-min pre-call ritual: pull prospect's industry KPI, mock dashboard with their logo, scripted bridge from each pain \u2192 specific dashboard."
+    }
+  },
+  {
+    "call_id": "call_2026_05_21_brightcare",
+    "se_name": "Karthik Raman",
+    "ae_name": "Priya Menon",
+    "prospect_company": "BrightCare Health",
+    "prompt_version": "2026-05-v1",
+    "scores": {
+      "Communication": {
+        "Tone": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Tone",
+          "low_confidence": false
+        },
+        "Engaging Level": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Engaging Level",
+          "low_confidence": false
+        }
+      },
+      "Presentation": {
+        "Relevance": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Relevance",
+          "low_confidence": false
+        },
+        "Cohesion": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Cohesion",
+          "low_confidence": false
+        }
+      },
+      "Audience Engagement": {
+        "Personalization": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Personalization",
+          "low_confidence": false
+        },
+        "Interactivity": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Interactivity",
+          "low_confidence": false
+        }
+      },
+      "Solution Skills": {
+        "Customization": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Customization",
+          "low_confidence": false
+        },
+        "Solution-Focused": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Solution-Focused",
+          "low_confidence": false
+        }
+      },
+      "Consultative Approach": {
+        "Proactiveness": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Proactiveness",
+          "low_confidence": false
+        },
+        "Recommendations": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Recommendations",
+          "low_confidence": false
+        },
+        "Highlighting Key Points": {
+          "score": 4.0,
+          "evidence": "[demo] paraphrase of moment relevant to Highlighting Key Points",
+          "low_confidence": false
+        }
+      },
+      "Touchbase on Pain Points": {
+        "Addressing Pain Points": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Addressing Pain Points",
+          "low_confidence": false
+        },
+        "Solution Understanding": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Solution Understanding",
+          "low_confidence": false
+        }
+      },
+      "Craftsmanship": {
+        "Personalization": {
+          "score": 3.4,
+          "evidence": "[demo] paraphrase of moment relevant to Personalization",
+          "low_confidence": false
+        },
+        "Customization": {
+          "score": 3.7,
+          "evidence": "[demo] paraphrase of moment relevant to Customization",
+          "low_confidence": false
+        }
+      }
+    },
+    "per_criterion_score": {
+      "Communication": 3.55,
+      "Presentation": 3.55,
+      "Audience Engagement": 3.55,
+      "Solution Skills": 3.55,
+      "Consultative Approach": 3.7,
+      "Touchbase on Pain Points": 3.55,
+      "Craftsmanship": 3.55
+    },
+    "weighted_final": 3.57,
+    "industry_percentile": 50,
+    "industry_gaps": {
+      "Communication": -0.25,
+      "Presentation": -0.05,
+      "Audience Engagement": 0.15,
+      "Solution Skills": 0.05,
+      "Consultative Approach": 0.5,
+      "Touchbase on Pain Points": 0.25,
+      "Craftsmanship": 0.55
+    },
+    "qualitative": {
+      "top_3_strengths": [
+        "Strong rapport opening \u2014 used prospect's industry-specific anecdote",
+        "Tied dashboards back to renewal-risk outcome the prospect cared about",
+        "Asked confirming question before deep-diving every module"
+      ],
+      "top_3_gaps": [
+        "Drifted into feature tour during 'Workflows' segment (~7 min)",
+        "Did not anchor on the pricing concern raised at minute 4",
+        "Generic demo env \u2014 no prospect logo or vertical data"
+      ],
+      "one_coaching_action": "Before next demo, build a 30-min pre-call ritual: pull prospect's industry KPI, mock dashboard with their logo, scripted bridge from each pain \u2192 specific dashboard."
+    }
+  }
+]

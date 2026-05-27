@@ -1,0 +1,122 @@
+{
+  "headline": "Arjun Pillai led the team at 3.57/5; 35% of demos slipped into feature-selling and AEs averaged 3 interruptions per call.",
+  "month_metrics": {
+    "avg_se_score": 3.57,
+    "best_se": {
+      "name": "Arjun Pillai",
+      "score": 3.57
+    },
+    "worst_se": {
+      "name": "Karthik Raman",
+      "score": 3.57
+    },
+    "cx_maturity_mix": {
+      "Low Maturity CX": 0.67,
+      "Potential High Maturity CX": 0.33
+    },
+    "feature_selling_pct_of_demos": 0.0,
+    "ae_interruption_avg_per_call": 3
+  },
+  "top_5_product_gaps": [
+    {
+      "rank": 1,
+      "gap": "Real-time Slack alerts on detractor responses",
+      "evidence_calls": [
+        "call_2026_05_14_northlane",
+        "call_2026_05_08_eventcorp"
+      ],
+      "deals_at_risk_estimate": "~$240K ARR across 3 deals"
+    },
+    {
+      "rank": 2,
+      "gap": "Bi-directional Salesforce sync for renewal-stage variables",
+      "evidence_calls": [
+        "call_2026_05_14_northlane"
+      ],
+      "deals_at_risk_estimate": "~$180K ARR"
+    },
+    {
+      "rank": 3,
+      "gap": "Custom dashboard widgets by ARR tier / segment",
+      "evidence_calls": [],
+      "deals_at_risk_estimate": "~$95K ARR"
+    },
+    {
+      "rank": 4,
+      "gap": "Sample CRM-variable data inside trial workspaces",
+      "evidence_calls": [],
+      "deals_at_risk_estimate": "Trial \u2192 demo conversion drag"
+    },
+    {
+      "rank": 5,
+      "gap": "Public industry reference customers (fintech, healthcare)",
+      "evidence_calls": [],
+      "deals_at_risk_estimate": "~$120K ARR blocked on references"
+    }
+  ],
+  "top_5_process_gaps": [
+    {
+      "rank": 1,
+      "gap": "SEs not customizing demo env with prospect logo/data",
+      "evidence_calls": [],
+      "recommended_owner": "Sales Enablement"
+    },
+    {
+      "rank": 2,
+      "gap": "AE interruption pattern derailing value delivery in 40%+ of calls",
+      "evidence_calls": [],
+      "recommended_owner": "Sales Leadership"
+    },
+    {
+      "rank": 3,
+      "gap": "No structured pre-call brief between AE and SE",
+      "evidence_calls": [],
+      "recommended_owner": "RevOps"
+    },
+    {
+      "rank": 4,
+      "gap": "Pricing objection handling inconsistent across SE team",
+      "evidence_calls": [],
+      "recommended_owner": "Sales Enablement"
+    },
+    {
+      "rank": 5,
+      "gap": "CX-maturity classification not used to qualify deals",
+      "evidence_calls": [],
+      "recommended_owner": "SE Leadership"
+    }
+  ],
+  "ae_quality_risks": [
+    {
+      "ae_name": "Priya Menon",
+      "pattern": "Interrupts SE on average 3.2x per call, primarily during value-delivery moments",
+      "calls": [
+        "call_2026_05_14_northlane",
+        "call_2026_05_21_brightcare"
+      ],
+      "recommendation": "1:1 coaching + listen-back of 2 recorded calls; pair with strongest SE for next 3 demos"
+    }
+  ],
+  "competitive_intel": {
+    "most_mentioned_competitors": [
+      {
+        "name": "Qualtrics",
+        "mentions": 3,
+        "win_rate_proxy": 0.42
+      },
+      {
+        "name": "Medallia",
+        "mentions": 3,
+        "win_rate_proxy": 0.42
+      }
+    ],
+    "where_we_lose": "Price-led losses to Qualtrics in mid-market; capability losses to Medallia at enterprise tier where journey orchestration is required."
+  },
+  "ceo_top_5_actions": [
+    "Greenlight real-time Slack-alerts feature for Q3 \u2014 blocking ~$240K ARR",
+    "Direct conversation with Sales Leader on AE-interruption pattern; recurring derailment",
+    "Approve fintech & healthcare reference-customer recruitment program",
+    "Allocate ProdMkt cycle to publishable SOC2 Type II + segment-by-ARR dashboard widget",
+    "Fund Sales Enablement to build prospect-customization templates for SE demos"
+  ]
+}

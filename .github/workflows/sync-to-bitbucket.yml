@@ -1,0 +1,42 @@
+# Mirrors green commits on `main` from GitHub (dev) to SurveySparrow's internal
+# Bitbucket repo (prod). Bitbucket is the source of truth for AWS deployments.
+#
+# Setup (one time):
+#   1. Create Bitbucket repo: bitbucket.org/surveysparrow/se-demo-assessment-agent
+#   2. Generate an App Password in Bitbucket with Repository:Write permission
+#   3. Add GitHub secrets:
+#        BITBUCKET_USER   = your-bitbucket-username
+#        BITBUCKET_TOKEN  = the app password
+#        BITBUCKET_REPO   = surveysparrow/se-demo-assessment-agent
+#
+# Trigger: only after CI (tests + security scan) is green on `main`.
+#
+# This is a one-way mirror. Any direct commit to Bitbucket will be overwritten.
+
+name: Sync to Bitbucket
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  mirror:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Mirror to Bitbucket
+        env:
+          BITBUCKET_USER:  ${{ secrets.BITBUCKET_USER }}
+          BITBUCKET_TOKEN: ${{ secrets.BITBUCKET_TOKEN }}
+          BITBUCKET_REPO:  ${{ secrets.BITBUCKET_REPO }}
+        run: |
+          git config user.name  "github-bitbucket-sync"
+          git config user.email "noreply@surveysparrow.com"
+          git remote add bitbucket "https://${BITBUCKET_USER}:${BITBUCKET_TOKEN}@bitbucket.org/${BITBUCKET_REPO}.git"
+          git push bitbucket main --force-with-lease
+          git push bitbucket --tags

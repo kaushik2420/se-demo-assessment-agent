@@ -1,0 +1,317 @@
+[
+  {
+    "use_case": {
+      "summary": "Prospect wants a one-off post-event satisfaction form with CSV export.",
+      "explicit_quotes": [
+        "We just need a form for our annual user conference"
+      ]
+    },
+    "cx_maturity": {
+      "scorecard": {
+        "Business objective": 1,
+        "Journey context": 1,
+        "Data richness": 1,
+        "Segmentation": 1,
+        "Workflow / action": 1,
+        "Governance": 1,
+        "Analytics depth": 1,
+        "Integration depth": 1
+      },
+      "category": "Low Maturity CX",
+      "rationale": "Single touchpoint, no segmentation, no action loop discussed."
+    },
+    "feature_requests": [
+      {
+        "feature": "Salesforce two-way sync for renewal-stage variables",
+        "urgency": "blocker",
+        "quote": "If it doesn't push back to SFDC opportunity, it's a no-go"
+      },
+      {
+        "feature": "Custom NPS-by-segment dashboard widget",
+        "urgency": "nice-to-have",
+        "quote": "Would be nice to slice by ARR tier"
+      }
+    ],
+    "competitors_mentioned": [
+      {
+        "name": "Qualtrics",
+        "context": "evaluated",
+        "quote": "We're comparing you with Qualtrics on price"
+      },
+      {
+        "name": "Medallia",
+        "context": "dismissed",
+        "quote": "Medallia is overkill for us"
+      }
+    ],
+    "trial_issues": [
+      {
+        "issue": "Trial workspace did not include sample CRM-variable data",
+        "severity": "medium",
+        "quote": "We couldn't really test the segmentation in trial"
+      }
+    ],
+    "loss_risk_signals": {
+      "no_reference_customer": {
+        "present": true,
+        "quote": "Do you have anyone in fintech I can talk to?"
+      },
+      "support_quality_concern": {
+        "present": false,
+        "quote": ""
+      },
+      "pricing_concern": {
+        "present": true,
+        "quote": "Qualtrics gave us a much lower price on the same volume"
+      },
+      "product_gap": {
+        "present": true,
+        "quote": "We need real-time Slack alerts on detractors"
+      },
+      "other": [
+        "Procurement requires SOC2 Type II report up front"
+      ]
+    },
+    "ae_behavior": {
+      "interruption_count": 3,
+      "barge_in_examples": [
+        "AE cut SE off mid-demo of dashboards to pivot to pricing",
+        "AE interrupted SE's discovery question to talk about the deal timeline",
+        "AE talked over SE during competitor objection handling"
+      ],
+      "interruption_impact": "derailed_value_delivery",
+      "ae_quality_flag": true
+    },
+    "se_selling_style": {
+      "feature_selling_share": 0.35,
+      "value_selling_share": 0.65,
+      "verdict": "balanced",
+      "evidence": "SE tied dashboard demo to 'fewer surprise churns at renewal' \u2014 value framing"
+    },
+    "prospect_engagement": {
+      "sentiment": "curious",
+      "buying_signals": [
+        "Asked about implementation timeline",
+        "Wanted to loop in CFO for next call"
+      ],
+      "objections": [
+        "Price vs Qualtrics",
+        "Concerns about migration from current tool"
+      ]
+    },
+    "call_id": "call_2026_05_14_northlane",
+    "se_name": "Arjun Pillai",
+    "ae_name": "Priya Menon",
+    "prompt_version": "2026-05-v1"
+  },
+  {
+    "use_case": {
+      "summary": "Prospect wants a one-off post-event satisfaction form with CSV export.",
+      "explicit_quotes": [
+        "We just need a form for our annual user conference"
+      ]
+    },
+    "cx_maturity": {
+      "scorecard": {
+        "Business objective": 1,
+        "Journey context": 1,
+        "Data richness": 1,
+        "Segmentation": 1,
+        "Workflow / action": 1,
+        "Governance": 1,
+        "Analytics depth": 1,
+        "Integration depth": 1
+      },
+      "category": "Low Maturity CX",
+      "rationale": "Single touchpoint, no segmentation, no action loop discussed."
+    },
+    "feature_requests": [
+      {
+        "feature": "Salesforce two-way sync for renewal-stage variables",
+        "urgency": "blocker",
+        "quote": "If it doesn't push back to SFDC opportunity, it's a no-go"
+      },
+      {
+        "feature": "Custom NPS-by-segment dashboard widget",
+        "urgency": "nice-to-have",
+        "quote": "Would be nice to slice by ARR tier"
+      }
+    ],
+    "competitors_mentioned": [
+      {
+        "name": "Qualtrics",
+        "context": "evaluated",
+        "quote": "We're comparing you with Qualtrics on price"
+      },
+      {
+        "name": "Medallia",
+        "context": "dismissed",
+        "quote": "Medallia is overkill for us"
+      }
+    ],
+    "trial_issues": [
+      {
+        "issue": "Trial workspace did not include sample CRM-variable data",
+        "severity": "medium",
+        "quote": "We couldn't really test the segmentation in trial"
+      }
+    ],
+    "loss_risk_signals": {
+      "no_reference_customer": {
+        "present": true,
+        "quote": "Do you have anyone in fintech I can talk to?"
+      },
+      "support_quality_concern": {
+        "present": false,
+        "quote": ""
+      },
+      "pricing_concern": {
+        "present": true,
+        "quote": "Qualtrics gave us a much lower price on the same volume"
+      },
+      "product_gap": {
+        "present": true,
+        "quote": "We need real-time Slack alerts on detractors"
+      },
+      "other": [
+        "Procurement requires SOC2 Type II report up front"
+      ]
+    },
+    "ae_behavior": {
+      "interruption_count": 3,
+      "barge_in_examples": [
+        "AE cut SE off mid-demo of dashboards to pivot to pricing",
+        "AE interrupted SE's discovery question to talk about the deal timeline",
+        "AE talked over SE during competitor objection handling"
+      ],
+      "interruption_impact": "derailed_value_delivery",
+      "ae_quality_flag": true
+    },
+    "se_selling_style": {
+      "feature_selling_share": 0.35,
+      "value_selling_share": 0.65,
+      "verdict": "balanced",
+      "evidence": "SE tied dashboard demo to 'fewer surprise churns at renewal' \u2014 value framing"
+    },
+    "prospect_engagement": {
+      "sentiment": "curious",
+      "buying_signals": [
+        "Asked about implementation timeline",
+        "Wanted to loop in CFO for next call"
+      ],
+      "objections": [
+        "Price vs Qualtrics",
+        "Concerns about migration from current tool"
+      ]
+    },
+    "call_id": "call_2026_05_08_eventcorp",
+    "se_name": "Arjun Pillai",
+    "ae_name": "Rohit Sharma",
+    "prompt_version": "2026-05-v1"
+  },
+  {
+    "use_case": {
+      "summary": "Prospect wants relationship NPS across customer base with renewal-risk alerts to CSMs and quarterly exec review.",
+      "explicit_quotes": [
+        "We need to know which accounts are at risk before renewal"
+      ]
+    },
+    "cx_maturity": {
+      "scorecard": {
+        "Business objective": 3,
+        "Journey context": 2,
+        "Data richness": 2,
+        "Segmentation": 2,
+        "Workflow / action": 3,
+        "Governance": 2,
+        "Analytics depth": 2,
+        "Integration depth": 2
+      },
+      "category": "Potential High Maturity CX",
+      "rationale": "Multi-touchpoint program with CRM-linked workflow ownership."
+    },
+    "feature_requests": [
+      {
+        "feature": "Salesforce two-way sync for renewal-stage variables",
+        "urgency": "blocker",
+        "quote": "If it doesn't push back to SFDC opportunity, it's a no-go"
+      },
+      {
+        "feature": "Custom NPS-by-segment dashboard widget",
+        "urgency": "nice-to-have",
+        "quote": "Would be nice to slice by ARR tier"
+      }
+    ],
+    "competitors_mentioned": [
+      {
+        "name": "Qualtrics",
+        "context": "evaluated",
+        "quote": "We're comparing you with Qualtrics on price"
+      },
+      {
+        "name": "Medallia",
+        "context": "dismissed",
+        "quote": "Medallia is overkill for us"
+      }
+    ],
+    "trial_issues": [
+      {
+        "issue": "Trial workspace did not include sample CRM-variable data",
+        "severity": "medium",
+        "quote": "We couldn't really test the segmentation in trial"
+      }
+    ],
+    "loss_risk_signals": {
+      "no_reference_customer": {
+        "present": true,
+        "quote": "Do you have anyone in fintech I can talk to?"
+      },
+      "support_quality_concern": {
+        "present": false,
+        "quote": ""
+      },
+      "pricing_concern": {
+        "present": true,
+        "quote": "Qualtrics gave us a much lower price on the same volume"
+      },
+      "product_gap": {
+        "present": true,
+        "quote": "We need real-time Slack alerts on detractors"
+      },
+      "other": [
+        "Procurement requires SOC2 Type II report up front"
+      ]
+    },
+    "ae_behavior": {
+      "interruption_count": 3,
+      "barge_in_examples": [
+        "AE cut SE off mid-demo of dashboards to pivot to pricing",
+        "AE interrupted SE's discovery question to talk about the deal timeline",
+        "AE talked over SE during competitor objection handling"
+      ],
+      "interruption_impact": "derailed_value_delivery",
+      "ae_quality_flag": true
+    },
+    "se_selling_style": {
+      "feature_selling_share": 0.35,
+      "value_selling_share": 0.65,
+      "verdict": "balanced",
+      "evidence": "SE tied dashboard demo to 'fewer surprise churns at renewal' \u2014 value framing"
+    },
+    "prospect_engagement": {
+      "sentiment": "curious",
+      "buying_signals": [
+        "Asked about implementation timeline",
+        "Wanted to loop in CFO for next call"
+      ],
+      "objections": [
+        "Price vs Qualtrics",
+        "Concerns about migration from current tool"
+      ]
+    },
+    "call_id": "call_2026_05_21_brightcare",
+    "se_name": "Karthik Raman",
+    "ae_name": "Priya Menon",
+    "prompt_version": "2026-05-v1"
+  }
+]

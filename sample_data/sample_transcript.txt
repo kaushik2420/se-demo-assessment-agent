@@ -1,0 +1,30 @@
+SurveySparrow demo call — synthetic example transcript
+Date: 2026-05-14 · Platform: Zoom · Duration: 38 min
+Attendees: Arjun Pillai (SE, SurveySparrow), Priya Menon (AE, SurveySparrow), Marcus Webb (VP CX, NorthLane Fintech), Sara Cho (Director Customer Ops, NorthLane Fintech)
+
+Priya: Hey Marcus, Sara — thanks for making time. We've got Arjun, our solution engineer, who'll walk you through how we'd actually solve what you mentioned in the first call.
+Marcus: Sounds good. Just to remind us, our big problem is we have no early-warning system before an account churns. We're a fintech, we lose customers and we find out at renewal — too late.
+Arjun: Marcus, that's exactly the pattern we see at — let me actually pull up an example. I built a workspace last night with NorthLane's logo and three of your real customer-tier names — Anchor, Vista, Pulse. So when we look at relationship NPS here, you'll see it sliced by tier already.
+Sara: Oh wow, you actually used our segmentation. That's helpful.
+Arjun: Of course. So the pattern we typically see in fintech — and Bain's 2024 SaaS churn report confirms this — is that 70% of churn signals show up 90 to 120 days before the renewal date. The question is, are you set up to hear them. So let me show you three things: relationship NPS by tier, the workflow that alerts your CSM when a tier-1 account drops 20 points, and the renewal-risk dashboard that rolls up to you, Marcus.
+Marcus: Yeah, okay, the workflow piece is what we don't have today. Walk me through that.
+Arjun: Let's go. So here's a detractor response from "Vista Capital" — synthetic, but you get the idea. The moment they submit, our workflow engine pushes to Slack — your CSM gets a DM, a ticket opens in HubSpot, an email goes to the AM. SLA timer starts. If it's not acknowledged in two hours, it escalates to the CS lead.
+Sara: Can it push back into Salesforce? We don't use HubSpot for accounts.
+Arjun: Yes, we have a two-way Salesforce sync. We pass the response back to the Opportunity object — there's a custom field for "Last NPS" and "Last NPS Date". It also creates Tasks on the AE if it's tied to an active renewal opportunity.
+Priya: And just to add — the SFDC integration is included in the Enterprise tier, no extra cost.
+Marcus: That's helpful. Now, on pricing — I'll be straight with you — Qualtrics quoted us at a much lower price for similar volume. What's your story there?
+Priya: Marcus, we can absolutely match price for the right deal size. Let me take that offline with procurement.
+Arjun: And on capability — what you're getting beyond price — Qualtrics will give you the survey, but the workflow orchestration, the Salesforce-aware automations, the closed-loop SLA tracking — those are typically Medallia-tier capabilities, and Medallia would be 3x our price. So we sit in a different segment of the market.
+Sara: Do you have anyone in fintech we can talk to? A reference?
+Arjun: That's a fair ask. Let me get back to you — I think I can put you in touch with one or two but I want to confirm with them first.
+Priya: We'll make that happen. Marcus, what does your timeline look like — when do you need this live by?
+Marcus: We're trying to be live by end of Q3. Sara, anything else?
+Sara: I want to make sure I can build dashboards myself — I don't want to depend on your team every time I need a new view.
+Arjun: Totally. Let me show you the dashboard builder for the last 5 minutes. Drag and drop, no SQL needed. You can build segment-specific dashboards by tier, by region, by CSM.
+[Arjun walks through dashboard builder for ~4 minutes]
+Sara: Yeah, this looks reasonable. One concern — in the trial we got, we didn't have any sample CRM-style variables, so it was hard to really test the segmentation.
+Arjun: Noted — I'll have our enablement team send you a properly configured trial workspace with sample CRM variables and three pre-built dashboards for fintech. By Friday.
+Marcus: Good. Last question — Slack alerts for detractors, do they support thread-based replies? I want my CSMs to be able to reply right in Slack and have it logged in SurveySparrow.
+Arjun: Honest answer — outbound Slack alert is there today, the reply-back-to-record is on the roadmap, not yet live. I won't oversell that one. If it's a hard requirement, I can put you in touch with our PM to see where it sits on the roadmap.
+Marcus: Appreciate the honesty. Alright, let's wrap. Priya, send me a quote, looped with my CFO. Sara, you and Arjun figure out the fintech reference.
+Priya: Will do. Thanks Marcus, thanks Sara.
