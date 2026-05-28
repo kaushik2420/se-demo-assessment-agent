@@ -15,7 +15,7 @@ type User = {
 
 type Me = { email: string; role: string; name: string };
 
-const fetcher = (url: string) => api(url);
+const fetcher = (url: string): Promise<any> => api(url);
 
 const ROLE_BADGES: Record<string, string> = {
   admin: "bg-purple-100 text-purple-800",
