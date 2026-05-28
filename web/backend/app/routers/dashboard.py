@@ -26,7 +26,7 @@ def se_dashboard(user: CurrentUser = Depends(get_current_user), db: Session = De
         return {"empty": True}
 
     calls = (db.query(Call).filter(Call.se_id == se.id)
-               .order_by(Call.created_at.desc()).limit(20).all())
+               .order_by(Call.created_at.desc()).limit(200).all())
 
     # Compute headline metrics
     scored = [c for c in calls if c.scorecard]
@@ -74,8 +74,9 @@ def se_dashboard(user: CurrentUser = Depends(get_current_user), db: Session = De
             "score": c.scorecard.weighted_final if c.scorecard else None,
             "cx_maturity": (c.insights.data.get("cx_maturity", {}).get("category")
                             if c.insights else None),
+            "duration_min": c.duration_min,
             "date": (c.call_date or c.created_at).strftime("%Y-%m-%d"),
-        } for c in calls[:10]],
+        } for c in calls],   # paginate client-side
     }
 
 
