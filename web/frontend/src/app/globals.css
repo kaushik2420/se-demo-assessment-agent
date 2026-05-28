@@ -48,6 +48,28 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Methodology drawer typography (scoped to .prose-content) */
+.prose-content h3 {
+  font-size: 16px; font-weight: 600; color: #253043;
+  margin: 24px 0 10px; padding-top: 4px;
+}
+.prose-content h3:first-child { margin-top: 0; }
+.prose-content p { font-size: 14px; line-height: 1.6; color: #253043; margin: 0 0 12px; }
+.prose-content ul { font-size: 14px; line-height: 1.6; color: #253043; padding-left: 22px; margin: 0 0 14px; }
+.prose-content ul li { margin-bottom: 6px; }
+.prose-content strong { color: #253043; font-weight: 600; }
+.prose-content table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 13px; }
+.prose-content th { text-align: left; padding: 8px 10px; background: #DCEFF1; color: #253043; font-weight: 600; }
+.prose-content td { padding: 8px 10px; border-bottom: 1px solid #DCEFF1; color: #253043; vertical-align: top; }
+.prose-content tr:last-child td { border-bottom: none; }
+.prose-content code { background: #F4FBFD; padding: 1px 5px; border-radius: 4px; font-size: 12px; color: #3A8290; }
+.prose-content blockquote { border-left: 3px solid #4A9CA6; padding-left: 12px; margin: 12px 0; color: #3D4858; font-style: italic; }
+.prose-content .callout {
+  background: linear-gradient(135deg, #DCEFF1, #B1EAF8);
+  border: 1px solid #5DACB6; border-radius: 10px; padding: 14px 16px; margin: 14px 0;
+}
+.prose-content .callout strong { color: #1A2433; }
+
 .bg-ss-navy       { background-color: var(--ss-navy); }
 .bg-ss-navy-dark  { background-color: var(--ss-navy-dark); }
 .bg-ss-teal       { background-color: var(--ss-teal); }

@@ -105,96 +105,51 @@ function MethodologyDrawer() {
     return () => clearTimeout(t);
   }, [open, section]);
 
+  const backdropCls = "fixed inset-0 z-40 transition-opacity duration-200 " +
+    (open ? "bg-slate-900/40 backdrop-blur-sm opacity-100" : "opacity-0 pointer-events-none");
+  const drawerCls = "fixed top-0 right-0 z-50 h-full w-full max-w-[720px] bg-white shadow-2xl overflow-y-auto transition-transform duration-300 ease-out " +
+    (open ? "translate-x-0" : "translate-x-full");
+
   return (
     <>
-      {/* Backdrop */}
-      <div
-        onClick={close}
-        className={`fixed inset-0 z-40 transition-opacity duration-200
-          ${open ? "bg-slate-900/40 backdrop-blur-sm opacity-100" : "opacity-0 pointer-events-none"}`}
-      />
-      {/* Drawer */}
-      <aside
-        ref={drawerRef}
-        className={`fixed top-0 right-0 z-50 h-full w-full max-w-[720px] bg-white shadow-2xl
-          overflow-y-auto transition-transform duration-300 ease-out
-          ${open ? "translate-x-0" : "translate-x-full"}`}
-        aria-hidden={!open}
-      >
-        {/* Sticky header */}
+      <div onClick={close} className={backdropCls} />
+      <aside ref={drawerRef} className={drawerCls} aria-hidden={!open}>
         <div className="sticky top-0 z-10 bg-white border-b border-ss-cyan-soft px-8 py-5 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-semibold text-ss-navy">Scoring methodology</h2>
-            <p className="text-xs text-ss-navy-soft mt-0.5">
-              How we score · how to read percentile · benchmarks
-            </p>
+            <p className="text-xs text-ss-navy-soft mt-0.5">How we score · how to read percentile · benchmarks</p>
           </div>
-          <button
-            onClick={close}
-            className="w-9 h-9 rounded-lg grid place-items-center text-ss-navy-soft
-                       hover:bg-ss-cream hover:text-ss-navy transition text-xl"
-            aria-label="Close"
-          >
+          <button onClick={close} aria-label="Close"
+            className="w-9 h-9 rounded-lg grid place-items-center text-ss-navy-soft hover:bg-ss-cream hover:text-ss-navy transition text-xl">
             ✕
           </button>
         </div>
 
-        {/* TOC */}
         <nav className="px-8 py-4 border-b border-ss-cyan-soft bg-ss-cream">
-          <div className="text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-2">
-            Jump to
-          </div>
+          <div className="text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-2">Jump to</div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
             {TOC.map((t) => (
               <a key={t.anchor} href={`#m-${t.anchor}`}
-                 onClick={(e) => {
-                   e.preventDefault();
-                   const el = drawerRef.current?.querySelector(`[data-section="${t.anchor}"]`);
-                   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                 }}
-                 className="text-ss-teal-deep hover:underline">
+                onClick={(e) => {
+                  e.preventDefault();
+                  const el = drawerRef.current?.querySelector(`[data-section="${t.anchor}"]`);
+                  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className="text-ss-teal-deep hover:underline">
                 {t.label}
               </a>
             ))}
           </div>
         </nav>
 
-        {/* Content */}
         <div className="px-8 py-6 prose-content">
           <Content />
         </div>
 
-        {/* Footer */}
         <div className="px-8 py-5 border-t border-ss-cyan-soft text-xs text-ss-navy-soft bg-ss-cream">
-          Questions about your scores? Reply to your monthly coaching email
-          (kaushik is CC'd). Every score has a transcript-quote as evidence —
-          we use that as the conversation starter.
+          Questions about your scores? Reply to your monthly coaching email (kaushik is CC'd). Every score has a transcript-quote as evidence — we use that as the conversation starter.
         </div>
       </aside>
-
-      {/* Inline content styles (scoped, no global Tailwind plugin needed) */}
-      <style jsx global>{`
-        .prose-content h3 {
-          font-size: 16px; font-weight: 600; color: #253043;
-          margin: 24px 0 10px; padding-top: 4px;
-        }
-        .prose-content h3:first-child { margin-top: 0; }
-        .prose-content p { font-size: 14px; line-height: 1.6; color: #253043; margin: 0 0 12px; }
-        .prose-content ul { font-size: 14px; line-height: 1.6; color: #253043; padding-left: 22px; margin: 0 0 14px; }
-        .prose-content ul li { margin-bottom: 6px; }
-        .prose-content strong { color: #253043; font-weight: 600; }
-        .prose-content table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 13px; }
-        .prose-content th { text-align: left; padding: 8px 10px; background: #DCEFF1; color: #253043; font-weight: 600; }
-        .prose-content td { padding: 8px 10px; border-bottom: 1px solid #DCEFF1; color: #253043; vertical-align: top; }
-        .prose-content tr:last-child td { border-bottom: none; }
-        .prose-content code { background: #F4FBFD; padding: 1px 5px; border-radius: 4px; font-size: 12px; color: #3A8290; }
-        .prose-content blockquote { border-left: 3px solid #4A9CA6; padding-left: 12px; margin: 12px 0; color: #3D4858; font-style: italic; }
-        .prose-content .callout {
-          background: linear-gradient(135deg,#DCEFF1,#B1EAF8);
-          border: 1px solid #5DACB6; border-radius: 10px; padding: 14px 16px; margin: 14px 0;
-        }
-        .prose-content .callout strong { color: #1A2433; }
-      `}</style>
     </>
   );
 }
