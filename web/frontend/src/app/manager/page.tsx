@@ -6,12 +6,14 @@ import { TopNav } from "@/components/TopNav";
 
 const fetcher = (url: string) => api(url);
 
+const MEDAL = ["🥇", "🥈"];
+
 export default function ManagerPage() {
   const { data, error, isLoading } = useSWR<any>("/dashboard/manager", fetcher);
   if (isLoading) return (<><TopNav /><div className="p-10 text-ss-navy-soft">Loading…</div></>);
   if (error) return (<><TopNav /><div className="p-10 text-red-600">Failed: {String(error)}</div></>);
 
-  const { team_metrics, leaderboard } = data;
+  const { team_metrics, leaderboard, demo_of_the_month } = data;
 
   return (
     <>
@@ -19,6 +21,50 @@ export default function ManagerPage() {
     <main className="max-w-7xl mx-auto p-10">
       <h1 className="text-2xl font-semibold text-ss-navy mb-1">SE Team</h1>
       <p className="text-ss-navy-soft mb-6">Leaderboard, aggregates, and AE quality across the team.</p>
+
+      {/* === DEMO OF THE MONTH === */}
+      <div
+        className="mb-6 rounded-xl p-6 border-2 text-white"
+        style={{
+          background: "linear-gradient(135deg, #4A9CA6 0%, #3A8290 100%)",
+          borderColor: "#4A9CA6",
+        }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="text-3xl">🏆</div>
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider opacity-90">Demo of the Month</div>
+            <div className="text-lg font-semibold">
+              Top performers on demo + follow-up demo calls this month
+            </div>
+          </div>
+        </div>
+
+        {demo_of_the_month && demo_of_the_month.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4">
+            {demo_of_the_month.map((w: any, i: number) => (
+              <div key={w.se_email}
+                   className="bg-white/15 backdrop-blur rounded-lg p-4 border border-white/20">
+                <div className="flex items-center gap-3">
+                  <div className="text-4xl">{MEDAL[i] || `#${i + 1}`}</div>
+                  <div className="flex-1">
+                    <div className="font-bold text-lg">{w.se_name}</div>
+                    <div className="text-xs opacity-90">{w.se_email}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold">{w.avg_score}</div>
+                    <div className="text-xs opacity-90">/ 5 · {w.call_count} calls</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="opacity-90 italic">
+            No eligible SEs yet this month (need ≥2 scored demo or follow-up-demo calls).
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-4 gap-4 mb-6">
         <Stat label="Team avg score" value={`${team_metrics.avg_score} / 5`} />

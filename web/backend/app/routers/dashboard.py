@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import CurrentUser, get_current_user, require_role
 from app.models import Call, CoachingAction, Insights, Scorecard, User
+from app.services.dotm import compute_dotm, is_winner
 
 
 router = APIRouter()
@@ -48,8 +49,12 @@ def se_dashboard(user: CurrentUser = Depends(get_current_user), db: Session = De
 
     pct = scored[0].scorecard.industry_percentile if scored else 50
 
+    # Demo of the Month — is this SE in the top-2?
+    dotm_winner = is_winner(db, se.email)
+
     return {
         "se": {"email": se.email, "name": se.name},
+        "dotm_winner": dotm_winner,   # null if not in top-2 this month
         "headline": {
             "current_score": current_score,
             "industry_percentile": pct,
@@ -76,6 +81,7 @@ def se_dashboard(user: CurrentUser = Depends(get_current_user), db: Session = De
 
 @router.get("/manager", dependencies=[Depends(require_role("manager", "admin"))])
 def manager_dashboard(db: Session = Depends(get_db)):
+    dotm = compute_dotm(db)
     ses = db.query(User).filter(User.role == "se").all()
     leaderboard = []
     for se in ses:
@@ -106,6 +112,7 @@ def manager_dashboard(db: Session = Depends(get_db)):
                                if i.get("se_selling_style", {}).get("verdict") == "feature_seller")
                            / max(len(all_insights), 1))
     return {
+        "demo_of_the_month": dotm,
         "team_metrics": {
             "avg_score": round(mean(c.scorecard.weighted_final for c in all_calls), 2) if all_calls else 0,
             "calls": len(all_calls),
