@@ -3,6 +3,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { TopNav } from "@/components/TopNav";
+import { InfoIcon } from "@/components/MethodologyDrawer";
 
 const fetcher = (url: string) => api(url);
 
@@ -67,14 +68,17 @@ export default function DashboardPage() {
         {!noCalls && (
           <>
             <div className="grid grid-cols-4 gap-4 mb-6">
-              <Stat label="Current Score" value={`${headline.current_score} / 5`}
+              <Stat label={<>Current Score<InfoIcon section="formula" label="How is the score calculated?" /></>}
+                    value={`${headline.current_score} / 5`}
                     trend={headline.score_delta_mom >= 0 ? "up" : "down"}
                     trendText={headline.score_delta_mom !== 0
                       ? `${headline.score_delta_mom >= 0 ? "↑" : "↓"} ${Math.abs(headline.score_delta_mom)} vs last month`
                       : ""} />
-              <Stat label="Industry Percentile" value={`P${headline.industry_percentile}`} />
+              <Stat label={<>Industry Percentile<InfoIcon section="percentile" label="What does P10 / P50 / P75 mean?" /></>}
+                    value={`P${headline.industry_percentile}`} />
               <Stat label="Calls This Month" value={String(headline.calls_this_month)} />
-              <Stat label="Coaching Action" value={coaching_action ? "See below ↓" : "Not set yet"} />
+              <Stat label={<>Coaching Action<InfoIcon section="scorecard" label="Why only one coaching action per month?" /></>}
+                    value={coaching_action ? "See below ↓" : "Not set yet"} />
             </div>
 
             {coaching_action && (
@@ -128,10 +132,12 @@ export default function DashboardPage() {
   );
 }
 
-function Stat({ label, value, trend, trendText }: { label: string; value: string; trend?: "up" | "down"; trendText?: string }) {
+function Stat({ label, value, trend, trendText }: { label: React.ReactNode; value: string; trend?: "up" | "down"; trendText?: string }) {
   return (
     <div className="bg-white border border-ss-cyan-soft rounded-xl p-5">
-      <div className="text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-3">{label}</div>
+      <div className="text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-3 flex items-center">
+        {label}
+      </div>
       <div className="text-3xl font-bold text-ss-navy">{value}</div>
       {trendText && (
         <div className={`text-xs mt-2 ${trend === "up" ? "text-emerald-600" : "text-red-600"}`}>

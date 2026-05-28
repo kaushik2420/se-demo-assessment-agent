@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { MethodologyProvider } from "@/components/MethodologyDrawer";
 
 export const metadata: Metadata = {
   title: "SurveySparrow SE Coach",
@@ -16,7 +17,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <MethodologyProvider>
+          {children}
+        </MethodologyProvider>
+      </body>
     </html>
   );
 }

@@ -3,6 +3,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { TopNav } from "@/components/TopNav";
+import { InfoIcon } from "@/components/MethodologyDrawer";
 
 const fetcher = (url: string) => api(url);
 
@@ -32,8 +33,13 @@ export default function ManagerPage() {
       >
         <div className="flex items-center gap-3 mb-4">
           <div className="text-3xl">🏆</div>
-          <div>
-            <div className="text-xs font-bold uppercase tracking-wider opacity-90">Demo of the Month</div>
+          <div className="flex-1">
+            <div className="text-xs font-bold uppercase tracking-wider opacity-90 flex items-center">
+              Demo of the Month
+              <button onClick={(e) => e.stopPropagation()} className="ml-1.5">
+                <InfoIcon section="managers" label="How is Demo of the Month decided?" />
+              </button>
+            </div>
             <div className="text-lg font-semibold">
               Top performers on demo + follow-up demo calls this month
             </div>

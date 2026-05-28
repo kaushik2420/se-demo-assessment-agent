@@ -4,10 +4,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, clearToken } from "@/lib/api";
 import { Logo } from "@/components/Logo";
+import { useMethodology } from "@/components/MethodologyDrawer";
 
 export function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const { openTo } = useMethodology();
   const [me, setMe] = useState<{ name: string; role: string; email: string } | null>(null);
 
   useEffect(() => {
@@ -40,6 +42,14 @@ export function TopNav() {
         </div>
       </div>
       <div className="flex items-center gap-3">
+        <button
+          onClick={() => openTo()}
+          className="text-sm text-ss-navy-soft hover:text-ss-navy transition flex items-center gap-1.5"
+          title="Scoring methodology"
+        >
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-ss-teal-soft text-ss-teal-deep text-[11px] font-bold leading-none">i</span>
+          How scoring works
+        </button>
         <button onClick={() => { clearToken(); router.push("/login"); }}
                 className="text-sm text-ss-navy-soft hover:text-ss-navy transition">
           Sign out
