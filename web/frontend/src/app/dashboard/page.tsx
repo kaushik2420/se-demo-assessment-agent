@@ -3,7 +3,6 @@ import useSWR from "swr";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { TopNav } from "@/components/TopNav";
-import { EventsFeed } from "@/components/EventsFeed";
 
 const fetcher = (url: string) => api(url);
 
@@ -98,35 +97,31 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* === RECENT CALLS + EVENTS FEED (2 columns) === */}
-        <div className="grid grid-cols-[2fr,1fr] gap-6">
-          <div className="bg-white rounded-xl border border-ss-cyan-soft p-6">
-            <h2 className="font-semibold text-ss-navy mb-4">Recent calls</h2>
-            {noCalls && (
-              <p className="text-ss-navy-soft italic">
-                No calls yet — upload your first transcript above.
-              </p>
-            )}
-            {recent_calls?.map((c: any) => (
-              <Link key={c.call_id} href={`/call/${c.call_id}`}
-                    className="grid grid-cols-[1fr,120px,140px,80px] gap-4 items-center py-3
-                               border-b border-ss-cyan-soft last:border-0 hover:bg-ss-cream rounded transition">
-                <div>
-                  <div className="font-medium text-ss-navy">{c.prospect}</div>
-                  <div className="text-xs text-ss-navy-soft">{c.date}</div>
-                </div>
-                <span className="px-2 py-1 bg-ss-cyan-soft text-ss-navy text-xs font-semibold rounded uppercase">
-                  {c.type}
-                </span>
-                <span className="text-xs text-ss-navy-soft">{c.cx_maturity || "—"}</span>
-                <div className="text-right font-semibold text-ss-navy">
-                  {c.score?.toFixed(2) ?? "—"} / 5
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <EventsFeed />
+        {/* === RECENT CALLS (full width again, focus on coaching) === */}
+        <div className="bg-white rounded-xl border border-ss-cyan-soft p-6">
+          <h2 className="font-semibold text-ss-navy mb-4">Recent calls</h2>
+          {noCalls && (
+            <p className="text-ss-navy-soft italic">
+              No calls yet — upload your first transcript above.
+            </p>
+          )}
+          {recent_calls?.map((c: any) => (
+            <Link key={c.call_id} href={`/call/${c.call_id}`}
+                  className="grid grid-cols-[1fr,120px,140px,80px] gap-4 items-center py-3
+                             border-b border-ss-cyan-soft last:border-0 hover:bg-ss-cream rounded transition">
+              <div>
+                <div className="font-medium text-ss-navy">{c.prospect}</div>
+                <div className="text-xs text-ss-navy-soft">{c.date}</div>
+              </div>
+              <span className="px-2 py-1 bg-ss-cyan-soft text-ss-navy text-xs font-semibold rounded uppercase">
+                {c.type}
+              </span>
+              <span className="text-xs text-ss-navy-soft">{c.cx_maturity || "—"}</span>
+              <div className="text-right font-semibold text-ss-navy">
+                {c.score?.toFixed(2) ?? "—"} / 5
+              </div>
+            </Link>
+          ))}
         </div>
       </main>
     </>

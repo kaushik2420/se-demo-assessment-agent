@@ -13,7 +13,7 @@ function fmt(d: string | null): string {
   }
 }
 
-export function EventsFeed() {
+export function EventsFeed({ limit = 8 }: { limit?: number }) {
   const { data, error, isLoading, mutate } = useSWR<any>("/events", fetcher, {
     revalidateOnFocus: false,
     refreshInterval: 6 * 60 * 60 * 1000, // 6h client-side too
@@ -42,7 +42,7 @@ export function EventsFeed() {
       {data && (
         <>
           <ul className="divide-y divide-ss-cyan-soft">
-            {data.events.slice(0, 8).map((e: any, i: number) => (
+            {data.events.slice(0, limit).map((e: any, i: number) => (
               <li key={`${e.url}-${i}`} className="py-3 first:pt-0 last:pb-0">
                 <a
                   href={e.url}
