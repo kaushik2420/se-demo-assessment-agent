@@ -42,42 +42,69 @@ export default function UploadPage() {
     <>
     <TopNav />
     <main className="max-w-3xl mx-auto p-10">
-      <h1 className="text-2xl font-semibold mb-1">Upload a call transcript</h1>
-      <p className="text-slate-500 mb-6">We accept transcripts only — not meeting notes or summaries.</p>
+      <h1 className="text-2xl font-semibold text-ss-navy mb-1">Upload a call transcript</h1>
+      <p className="text-ss-navy-soft mb-6">
+        Paste a transcript from Granola (or any tool with speaker labels).
+        We accept transcripts only — not meeting notes or summaries.
+      </p>
 
-      <label className="block text-sm font-medium mb-2">Call type</label>
+      <label className="block text-sm font-medium text-ss-navy mb-2">Call type</label>
       <div className="grid grid-cols-3 gap-2 mb-6">
         {CALL_TYPES.map((t) => (
           <button key={t.v}
+            type="button"
             onClick={() => setCallType(t.v)}
             className={`p-3 border-2 rounded-lg text-sm font-medium transition
-              ${callType === t.v ? "border-blue-600 bg-blue-50 text-blue-900" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+              ${callType === t.v
+                ? "border-ss-navy bg-ss-cyan-soft text-ss-navy"
+                : "border-ss-cyan-soft text-ss-navy-soft hover:border-ss-cyan-bright"}`}>
             {t.l}
           </button>
         ))}
       </div>
 
-      <label className="block text-sm font-medium mb-2">Prospect company</label>
-      <input value={prospect} onChange={(e) => setProspect(e.target.value)} placeholder="e.g. NorthLane Fintech"
-             className="w-full mb-6 px-4 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-600" />
+      <label className="block text-sm font-medium text-ss-navy mb-2">Prospect company</label>
+      <input
+        value={prospect} onChange={(e) => setProspect(e.target.value)}
+        placeholder="e.g. NorthLane Fintech"
+        className="w-full mb-6 px-4 py-2.5 border border-ss-cyan-soft rounded-lg
+                   outline-none focus:ring-2 focus:ring-ss-cyan focus:border-ss-cyan-deep transition"
+      />
 
-      <label className="block text-sm font-medium mb-2">Transcript</label>
-      <textarea value={text} onChange={(e) => setText(e.target.value)}
-                placeholder="Paste the full diarized transcript with speaker labels (Name: text). Minimum ~500 words, ≥2 speakers."
-                className="w-full min-h-[240px] p-4 font-mono text-sm border-2 border-dashed border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:border-solid" />
+      <label className="block text-sm font-medium text-ss-navy mb-2">Transcript</label>
+      <textarea
+        value={text} onChange={(e) => setText(e.target.value)}
+        placeholder="Paste the full diarized transcript with speaker labels (Name: text). Minimum ~500 words, ≥2 speakers."
+        className="w-full min-h-[240px] p-4 font-mono text-sm border-2 border-dashed border-ss-cyan-soft
+                   rounded-lg outline-none focus:border-ss-cyan-deep focus:border-solid transition"
+      />
 
       {result && (
-        <div className={`mt-4 p-4 rounded-lg border ${result.accepted ? "bg-emerald-50 border-emerald-300 text-emerald-900" : "bg-red-50 border-red-300 text-red-900"}`}>
-          <div className="font-semibold mb-1">{result.validation.title || result.message}</div>
-          <div className="text-sm">{result.validation.detail || result.message}</div>
+        <div
+          className={`mt-4 p-4 rounded-lg border ${
+            result.accepted
+              ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+              : "bg-red-50 border-red-300 text-red-900"
+          }`}
+        >
+          <div className="font-semibold mb-1">
+            {result.validation.title || result.message}
+          </div>
+          <div className="text-sm">
+            {result.validation.detail || result.message}
+          </div>
         </div>
       )}
 
       <div className="mt-6 flex justify-end gap-3">
-        <button onClick={() => router.push("/dashboard")} className="px-5 py-2.5 border border-slate-300 rounded-lg">Cancel</button>
+        <button onClick={() => router.push("/dashboard")}
+                className="px-5 py-2.5 border border-ss-cyan-soft text-ss-navy rounded-lg hover:bg-ss-cream transition">
+          Cancel
+        </button>
         <button onClick={submit} disabled={submitting || !text || !prospect}
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50">
-          {submitting ? "Validating…" : "Analyze →"}
+                className="px-5 py-2.5 bg-ss-navy text-white rounded-lg font-semibold
+                           hover:bg-ss-navy-dark transition disabled:opacity-50 disabled:cursor-not-allowed">
+          {submitting ? "Analyzing…" : "Analyze →"}
         </button>
       </div>
     </main>

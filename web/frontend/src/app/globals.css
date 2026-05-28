@@ -2,14 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================================
+   SurveySparrow brand palette (calibrated to official logo SVG)
+   Primary:  #253043 Ebony Clay navy
+   Logo teal:#4A9CA6  ← exact teal from the official brand SVG
+   Accent:   #B1EAF8 Charlotte (lighter cyan for soft backgrounds)
+   Surface:  #FFFFFF
+   ========================================================= */
 :root {
-  --bg: #F7F8FB;
-  --surface: #FFFFFF;
-  --border: #E4E8F0;
-  --text: #0F172A;
-  --text-muted: #64748B;
-  --primary: #2563EB;
-  --primary-soft: #DBEAFE;
+  --ss-navy:        #253043;
+  --ss-navy-dark:   #1A2433;
+  --ss-navy-deep:   #0F1623;
+  --ss-navy-soft:   #3D4858;
+
+  --ss-teal:        #4A9CA6;   /* official brand teal */
+  --ss-teal-bright: #5DACB6;
+  --ss-teal-deep:   #3A8290;
+  --ss-teal-soft:   #DCEFF1;
+
+  --ss-cyan:        #B1EAF8;
+  --ss-cyan-soft:   #E7F7FC;
+  --ss-cream:       #F4FBFD;
+
+  --ss-white:       #FFFFFF;
+
+  --gray-50:  #F7F9FB;
+  --gray-100: #EEF2F6;
+  --gray-200: #DDE4EC;
+  --gray-300: #C2CBD5;
+  --gray-500: #6B7888;
+  --gray-700: #3D4858;
+
+  --success: #16A34A;
+  --success-soft: #D1FAE5;
+  --warning: #D97706;
+  --warning-soft: #FEF3C7;
+  --danger:  #DC2626;
+  --danger-soft: #FEE2E2;
 }
 
-html, body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+html, body {
+  background: var(--ss-cream);
+  color: var(--ss-navy);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.bg-ss-navy       { background-color: var(--ss-navy); }
+.bg-ss-navy-dark  { background-color: var(--ss-navy-dark); }
+.bg-ss-teal       { background-color: var(--ss-teal); }
+.bg-ss-teal-deep  { background-color: var(--ss-teal-deep); }
+.bg-ss-teal-soft  { background-color: var(--ss-teal-soft); }
+.bg-ss-cyan       { background-color: var(--ss-cyan); }
+.bg-ss-cyan-soft  { background-color: var(--ss-cyan-soft); }
+.bg-ss-cream      { background-color: var(--ss-cream); }
+.text-ss-navy     { color: var(--ss-navy); }
+.text-ss-teal     { color: var(--ss-teal); }
+.text-ss-teal-deep{ color: var(--ss-teal-deep); }
+.border-ss-cyan   { border-color: var(--ss-cyan); }
+.border-ss-teal   { border-color: var(--ss-teal); }
