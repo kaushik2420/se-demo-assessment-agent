@@ -83,23 +83,32 @@ Render dashboard → `se-coach-api` → **Environment**:
 
 You need to create at least one admin/manager (you) and a few SE accounts.
 
-Easiest: Render dashboard → `se-coach-api` → **Shell** tab → opens a web terminal in the container. Then:
+Render dashboard → `se-coach-api` → **Shell** tab → opens a web terminal in the container. Then:
 
 ```bash
-# Create yourself as a manager
-python -m app.admin create-user kaushikn2416@gmail.com "Kaushik N" manager
-
-# Create your SEs (one command per SE)
-python -m app.admin create-user ishrath.ahamed@surveysparrow.com "Ishrath Ahamed" se
-python -m app.admin create-user arjun.pillai@surveysparrow.com    "Arjun Pillai"     se
-python -m app.admin create-user karthik.raman@surveysparrow.com   "Karthik Raman"    se
-# ... etc
+# Create the entire team (you + 9 SEs) in one shot. All names, emails, roles baked into app/admin.py.
+python -m app.admin seed-team
 
 # Verify
 python -m app.admin list-users
 ```
 
-Each `create-user` prints a one-time password — copy it from the terminal output and share via Slack DM (NOT a channel) or 1Password.
+`seed-team` prints a one-time password for each user — copy each row from the terminal output and DM that password to that person via Slack DM (NOT a channel) or 1Password. **Your own password is in that table too** (top row) — write it down before closing the shell. The script is idempotent: re-running it skips anyone who already exists, so it's safe to run again later (just edit `TEAM_SEED` in `web/backend/app/admin.py` to add new joiners and re-run).
+
+**Current team baked into `seed-team`:**
+
+| Email                                       | Name              | Role     | Title                                |
+| ------------------------------------------- | ----------------- | -------- | ------------------------------------ |
+| kaushik.natarajan@surveysparrow.com         | Kaushik Natarajan | admin    | Director of Solutions and Consulting |
+| parul.gajaraj@surveysparrow.com             | Parul Gajaraj     | se       | Lead Solution Engineer               |
+| melodina.carnelian@surveysparrow.com        | Melodina Carnelian| se       | Senior Solution Engineer             |
+| yamuna.easwari@surveysparrow.com            | Yamuna E          | se       | Senior Solution Engineer             |
+| sushmitha.nb@surveysparrow.com              | Sushmitha NB      | manager  | Associate Manager                    |
+| ishrath.ahamed@surveysparrow.com            | Ishrath Ahamed    | se       | Lead Solution Engineer               |
+| karthik.kumarendhiran@surveysparrow.com     | Karthik K         | se       | Senior Solution Engineer             |
+| subiksha.m@surveysparrow.com                | Subiksha M        | se       | Solution Engineer                    |
+| sujith.balakrishnan@surveysparrow.com       | Sujith B          | se       | Principal Solution Engineer          |
+| hala@surveysparrow.com                      | Hala Haseeb       | se       | Lead Solution Engineer               |
 
 ---
 

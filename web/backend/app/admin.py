@@ -3,6 +3,7 @@ Admin CLI — for kaushik to manage users from the command line.
 
 Usage (from web/backend/):
     python -m app.admin init-db
+    python -m app.admin seed-team
     python -m app.admin create-user <email> "<name>" <role> [password]
     python -m app.admin list-users
     python -m app.admin set-password <email> <new_password>
@@ -29,9 +30,54 @@ def _gen_password(n: int = 16) -> str:
     return "".join(secrets.choice(alphabet) for _ in range(n))
 
 
+# ----------------------------------------------------------------------------
+# The SurveySparrow SE team — edit this list as people join / leave.
+# Title is informational (printed only); role drives permissions.
+# ----------------------------------------------------------------------------
+TEAM_SEED = [
+    # email,                                       name,                  role,      title
+    ("kaushik.natarajan@surveysparrow.com",        "Kaushik Natarajan",   "admin",   "Director of Solutions and Consulting"),
+    ("parul.gajaraj@surveysparrow.com",            "Parul Gajaraj",       "se",      "Lead Solution Engineer"),
+    ("melodina.carnelian@surveysparrow.com",       "Melodina Carnelian",  "se",      "Senior Solution Engineer"),
+    ("yamuna.easwari@surveysparrow.com",           "Yamuna E",            "se",      "Senior Solution Engineer"),
+    ("sushmitha.nb@surveysparrow.com",             "Sushmitha NB",        "manager", "Associate Manager"),
+    ("ishrath.ahamed@surveysparrow.com",           "Ishrath Ahamed",      "se",      "Lead Solution Engineer"),
+    ("karthik.kumarendhiran@surveysparrow.com",    "Karthik K",           "se",      "Senior Solution Engineer"),
+    ("subiksha.m@surveysparrow.com",               "Subiksha M",          "se",      "Solution Engineer"),
+    ("sujith.balakrishnan@surveysparrow.com",      "Sujith B",            "se",      "Principal Solution Engineer"),
+    ("hala@surveysparrow.com",                     "Hala Haseeb",         "se",      "Lead Solution Engineer"),
+]
+
+
 def cmd_init_db():
     init_db()
     print("✓ Tables created")
+
+
+def cmd_seed_team():
+    """Create the full SE team in one shot. Idempotent — skips users that already exist."""
+    print(f"Seeding {len(TEAM_SEED)} SurveySparrow SE team members...\n")
+    print(f"{'EMAIL':46s} {'NAME':22s} {'ROLE':9s} {'TITLE':30s} PASSWORD")
+    print("-" * 130)
+    created, skipped = 0, 0
+    with SessionLocal() as db:
+        for email, name, role, title in TEAM_SEED:
+            existing = db.query(User).filter(User.email == email.lower()).first()
+            if existing:
+                print(f"{email:46s} {name:22s} {role:9s} {title:30s} (already exists — skipped)")
+                skipped += 1
+                continue
+            pwd = _gen_password()
+            user = User(email=email.lower(), name=name, role=role, pwd_hash=hash_password(pwd))
+            db.add(user)
+            print(f"{email:46s} {name:22s} {role:9s} {title:30s} {pwd}")
+            created += 1
+        db.commit()
+    print()
+    print(f"✓ Seed complete — created {created}, skipped {skipped}.")
+    if created > 0:
+        print("  Copy each password from the table above and DM it to that person via 1Password / signal / Slack DM.")
+        print("  Tell them to change it on first login (Settings → Password — coming in v2; for now /auth/me proves they're in).")
 
 
 def cmd_create_user(email: str, name: str, role: str, password: str | None = None):
@@ -107,6 +153,8 @@ if __name__ == "__main__":
     try:
         if cmd == "init-db":
             cmd_init_db()
+        elif cmd == "seed-team":
+            cmd_seed_team()
         elif cmd == "create-user":
             cmd_create_user(*args)
         elif cmd == "list-users":
