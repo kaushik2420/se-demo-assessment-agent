@@ -25,7 +25,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_db
-from app.routers import auth, calls, dashboard, events, upload
+from app.routers import auth, calls, dashboard, events, team, upload
 
 app = FastAPI(
     title="SurveySparrow SE Coach API",
@@ -63,6 +63,7 @@ app.include_router(calls.router, prefix="/calls", tags=["calls"])
 app.include_router(upload.router, prefix="/calls", tags=["upload"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(events.router, prefix="/events", tags=["events"])
+app.include_router(team.router, prefix="/team", tags=["team"])
 
 
 @app.get("/", tags=["health"])
