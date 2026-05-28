@@ -74,7 +74,8 @@ async def upload_transcript(
             )
         transcript = contents
 
-    # 2. Validate (reject notes/summaries)
+    # 2. Validate (reject notes/summaries). Also returns a normalized version —
+    #    handles Avoma's "speaker on own line" format auto-converted to canonical.
     result: ValidationResult = validate(transcript)
     if not result.ok:
         return UploadResponse(
@@ -83,6 +84,8 @@ async def upload_transcript(
                         "detail": result.detail, "metrics": result.metrics},
             message="Rejected — paste a real call transcript, not notes or a summary.",
         )
+    # Use normalized text for everything downstream (scoring, insights, DB storage)
+    transcript = result.normalized or transcript
 
     # 3. Look up SE user
     se = db.query(User).filter(User.email == user.email).first()

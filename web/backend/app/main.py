@@ -40,12 +40,19 @@ def _startup():
     init_db()
 
 
-_origins = os.getenv("CORS_ORIGINS",
-                     "http://localhost:3000,https://localhost:3000").split(",")
+_origins = [o.strip() for o in os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,https://localhost:3000"
+).split(",") if o.strip()]
+
+# Also allow any *.vercel.app (preview deploys) and any
+# *.surveysparrow.{com,internal} if/when you add a custom domain.
+_origin_regex = r"^https://([a-z0-9-]+\.)*(vercel\.app|surveysparrow\.com|surveysparrow\.internal)$"
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in _origins],
+    allow_origins=_origins,
+    allow_origin_regex=_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
