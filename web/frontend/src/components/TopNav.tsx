@@ -40,17 +40,13 @@ export function TopNav() {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <Link href="/upload"
-              className="px-4 py-2 border border-ss-navy text-ss-navy rounded-lg text-sm font-medium hover:bg-ss-cyan-soft transition">
-          + Upload transcript
-        </Link>
         <button onClick={() => { clearToken(); router.push("/login"); }}
                 className="text-sm text-ss-navy-soft hover:text-ss-navy transition">
           Sign out
         </button>
         <div
           className="w-9 h-9 rounded-full text-white grid place-items-center font-semibold text-sm"
-          style={{ background: "linear-gradient(135deg,#5CCDED 0%, #253043 100%)" }}
+          style={{ background: "linear-gradient(135deg,#5DACB6 0%, #253043 100%)" }}
           title={me.name}
         >
           {me.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
