@@ -18,23 +18,30 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 
 SECRET_KEY = os.getenv("JWT_SECRET", "dev-only-do-not-use-in-prod")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+BCRYPT_ROUNDS = 12
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+
+def _trunc(password: str) -> bytes:
+    """bcrypt has a hard 72-byte limit on the input; truncate to match historical behavior."""
+    return password.encode("utf-8")[:72]
 
 
 def hash_password(password: str) -> str:
-    return pwd_ctx.hash(password)
+    return bcrypt.hashpw(_trunc(password), bcrypt.gensalt(rounds=BCRYPT_ROUNDS)).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(_trunc(plain), hashed.encode("utf-8"))
+    except (ValueError, TypeError):
+        return False
 
 
 def create_access_token(subject: str, role: str, expires_min: int = ACCESS_TOKEN_EXPIRE_MINUTES) -> str:
