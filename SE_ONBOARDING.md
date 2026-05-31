@@ -85,7 +85,7 @@ folder), but it's not the only source.
 
 **Q: What if I forget to share a Granola note to the folder?**
 The call simply doesn't get analyzed. No penalty — your score averages over
-what's analyzed, not what wasn't. You can share it later (within 7 days of
+what's analyzed, not what wasn't. You can share it later (within 14 days of
 the call) and the portal will pick it up on the next sync.
 
 **Q: What if I forget to start Granola entirely?**

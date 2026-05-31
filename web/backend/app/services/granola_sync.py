@@ -119,7 +119,7 @@ def _read_last_sync() -> datetime:
             return datetime.fromisoformat(_STATE_FILE.read_text().strip())
         except Exception:
             pass
-    return datetime.now(timezone.utc) - timedelta(days=7)
+    return datetime.now(timezone.utc) - timedelta(days=14)
 
 
 def _write_last_sync(when: datetime):
