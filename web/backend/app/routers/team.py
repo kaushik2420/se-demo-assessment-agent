@@ -111,8 +111,8 @@ def granola_sync_now(bg: BackgroundTasks):
     """Start a Granola sync in the background. Returns immediately. Poll
     /team/granola/status to see progress (`in_progress` flag) and the last
     completed run's stats (`last_result`)."""
-    from app.services.granola_sync import run_sync, _PROGRESS_FILE
-    if _PROGRESS_FILE.exists():
+    from app.services.granola_sync import run_sync, _is_in_progress
+    if _is_in_progress():
         return {"status": "already_running",
                 "message": "A sync is already running. Poll status for results."}
     bg.add_task(run_sync)

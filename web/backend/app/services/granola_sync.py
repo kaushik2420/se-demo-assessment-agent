@@ -65,6 +65,30 @@ _STATE_FILE = Path("/tmp/granola_last_sync.txt")
 _RESULT_FILE = Path("/tmp/granola_last_result.json")
 _PROGRESS_FILE = Path("/tmp/granola_sync_in_progress")
 
+# If a sync has been "in progress" longer than this, assume the process died
+# without cleaning up and treat the flag as stale.
+_STALE_PROGRESS_MINUTES = 15
+
+
+def _is_progress_stale() -> bool:
+    if not _PROGRESS_FILE.exists():
+        return False
+    try:
+        age_seconds = datetime.now(timezone.utc).timestamp() - _PROGRESS_FILE.stat().st_mtime
+        return age_seconds > _STALE_PROGRESS_MINUTES * 60
+    except Exception:
+        return True  # if we can't stat, treat as stale to allow recovery
+
+
+def _is_in_progress() -> bool:
+    """True only if a sync is currently running (not stale)."""
+    if not _PROGRESS_FILE.exists():
+        return False
+    if _is_progress_stale():
+        _PROGRESS_FILE.unlink(missing_ok=True)  # auto-cleanup
+        return False
+    return True
+
 
 def _set_in_progress(yes: bool):
     if yes:
@@ -112,7 +136,7 @@ def get_status() -> dict:
         "configured": bool(os.getenv("GRANOLA_API_KEY")),
         "internal_domain": INTERNAL_DOMAIN,
         "folder_filter": GRANOLA_FOLDER_NAME or None,
-        "in_progress": _PROGRESS_FILE.exists(),
+        "in_progress": _is_in_progress(),
         "last_result": _read_result(),
     }
 

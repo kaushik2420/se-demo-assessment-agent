@@ -36,6 +36,21 @@ def get_db() -> Session:
 
 
 def init_db():
-    """Create tables (run on first deploy)."""
+    """Create tables (run on first deploy). Also handles idempotent column adds
+    for fields added after the initial schema (since SQLAlchemy's create_all
+    only creates missing tables, not missing columns)."""
     from app import models  # noqa: F401  — register models
+    from sqlalchemy import text
     Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        # Idempotent column adds — safe to run on every boot
+        try:
+            conn.execute(text(
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS external_id VARCHAR(128)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS idx_calls_external_id ON calls(external_id)"
+            ))
+            conn.commit()
+        except Exception as e:
+            print(f"[init_db] non-fatal: {e}")

@@ -34,6 +34,7 @@ class Call(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     call_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    external_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)  # Granola meeting ID etc.
     se_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     se_name: Mapped[str] = mapped_column(String(255))  # denormalized for fast list queries
     ae_name: Mapped[Optional[str]] = mapped_column(String(255))
