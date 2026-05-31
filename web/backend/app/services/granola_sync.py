@@ -29,6 +29,7 @@ Notes:
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import uuid
@@ -58,9 +59,34 @@ INTERNAL_DOMAIN = os.getenv("INTERNAL_DOMAIN", "surveysparrow.com")
 # If unset, all workspace-accessible notes are eligible (modulo external filter).
 GRANOLA_FOLDER_NAME = os.getenv("GRANOLA_FOLDER_NAME", "").strip()
 
-# Persisted in-memory state — for production, store in DB. For MVP, a flat file
-# alongside the app instance is fine since we have only one Render dyno.
+# Persisted state on local disk. For MVP this is fine — single Render dyno.
+# Would move to DB if we ever scale to multi-instance.
 _STATE_FILE = Path("/tmp/granola_last_sync.txt")
+_RESULT_FILE = Path("/tmp/granola_last_result.json")
+_PROGRESS_FILE = Path("/tmp/granola_sync_in_progress")
+
+
+def _set_in_progress(yes: bool):
+    if yes:
+        _PROGRESS_FILE.touch()
+    else:
+        _PROGRESS_FILE.unlink(missing_ok=True)
+
+
+def _write_result(stats: dict):
+    try:
+        _RESULT_FILE.write_text(json.dumps(stats))
+    except Exception as e:
+        print(f"[granola_sync] failed to persist last result: {e}")
+
+
+def _read_result() -> Optional[dict]:
+    if not _RESULT_FILE.exists():
+        return None
+    try:
+        return json.loads(_RESULT_FILE.read_text())
+    except Exception:
+        return None
 
 
 def _read_last_sync() -> datetime:
@@ -86,6 +112,8 @@ def get_status() -> dict:
         "configured": bool(os.getenv("GRANOLA_API_KEY")),
         "internal_domain": INTERNAL_DOMAIN,
         "folder_filter": GRANOLA_FOLDER_NAME or None,
+        "in_progress": _PROGRESS_FILE.exists(),
+        "last_result": _read_result(),
     }
 
 
@@ -131,8 +159,14 @@ def _attendee_summary(note: GranolaNoteDetail, se_name: str) -> str:
 def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> dict:
     """
     Run a single Granola sync. Returns a stats dict for the admin UI / logs.
-    Safe to call from APScheduler or the manual sync button.
+    Safe to call from APScheduler, the manual sync button (via background task),
+    or a manual debug call.
+
+    This function may take minutes to complete (each note triggers Claude
+    scoring + insight extraction). Callers from HTTP context should invoke
+    it via FastAPI BackgroundTasks to avoid request timeouts.
     """
+    _set_in_progress(True)
     started_at = datetime.now(timezone.utc)
     since = force_since or _read_last_sync()
     stats = {
@@ -151,6 +185,7 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
 
     if not os.getenv("GRANOLA_API_KEY"):
         stats["errors"].append("GRANOLA_API_KEY not set")
+        _write_result(stats); _set_in_progress(False)
         return stats
 
     try:
@@ -160,6 +195,7 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
         notes = client.list_notes_since(since)
     except Exception as e:
         stats["errors"].append(f"list_notes_since failed: {e}")
+        _write_result(stats); _set_in_progress(False)
         return stats
 
     stats["notes_seen"] = len(notes)
@@ -268,6 +304,8 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
 
     _write_last_sync(started_at)
     stats["finished_at"] = datetime.now(timezone.utc).isoformat()
+    _write_result(stats)
+    _set_in_progress(False)
     return stats
 
 

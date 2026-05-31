@@ -18,7 +18,7 @@ import string
 from datetime import datetime, timezone
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
@@ -107,10 +107,17 @@ def granola_status():
 
 @router.post("/granola/sync",
              dependencies=[Depends(require_role("admin", "manager"))])
-def granola_sync_now():
-    """Manually trigger a Granola sync. Returns stats from the run."""
-    from app.services.granola_sync import run_sync
-    return run_sync()
+def granola_sync_now(bg: BackgroundTasks):
+    """Start a Granola sync in the background. Returns immediately. Poll
+    /team/granola/status to see progress (`in_progress` flag) and the last
+    completed run's stats (`last_result`)."""
+    from app.services.granola_sync import run_sync, _PROGRESS_FILE
+    if _PROGRESS_FILE.exists():
+        return {"status": "already_running",
+                "message": "A sync is already running. Poll status for results."}
+    bg.add_task(run_sync)
+    return {"status": "started",
+            "message": "Sync started in background. Refresh status to see progress."}
 
 
 # ----------------------------------------------------------------------------
