@@ -3,6 +3,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { TopNav } from "@/components/TopNav";
+import { GranolaSyncCard } from "@/components/GranolaSyncCard";
 
 type User = {
   id: number;
@@ -106,6 +107,11 @@ export default function TeamPage() {
             }}
           />
         )}
+
+        {/* Granola sync controls */}
+        <div className="mb-6">
+          <GranolaSyncCard />
+        </div>
 
         {/* Existing users */}
         <div className="bg-white border border-ss-cyan-soft rounded-xl overflow-hidden mt-2">

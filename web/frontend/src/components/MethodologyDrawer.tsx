@@ -333,6 +333,15 @@ function Content() {
 
       <section data-section="faq">
         <h3>8. FAQ</h3>
+        <p><strong>Why do Granola-sourced calls have a yellow "AE behavior is inferred" banner?</strong><br/>
+          Granola records the SE's microphone separately but mixes the AE and prospect into a
+          single "other" audio track. So when we label speaker turns, we know which lines are
+          the SE's, but we can't directly distinguish AE turns from prospect turns. Claude
+          infers attribution from content patterns (AEs talk about pricing/timeline, prospects
+          ask about features) — accurate enough for direction, not for surgical metrics like
+          exact interruption counts. For calls where AE quality is the question being asked,
+          paste a richer per-speaker transcript via the Upload flow.
+        </p>
         <p><strong>Why bands (P10, P25...) not exact numbers like P67?</strong><br/>
           Because the underlying benchmark data is itself imprecise. Fake precision would mislead.
         </p>

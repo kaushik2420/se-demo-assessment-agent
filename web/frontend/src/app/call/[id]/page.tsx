@@ -49,6 +49,20 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
           <Stat label="AE Behavior" value={insights?.ae_behavior?.ae_quality_flag ? "Flagged" : "Clean"} />
         </div>
 
+        {/* Source-aware disclaimer for Granola transcripts */}
+        {call.source === "granola" && insights?.ae_behavior && (
+          <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex gap-2 items-start">
+            <span className="font-bold mt-0.5">ⓘ</span>
+            <div>
+              <strong>AE behavior signals are inferred, not measured</strong> for this call. Granola
+              transcripts use a single audio track for everyone other than the SE, so we can't
+              distinguish AE turns from prospect turns directly — Claude attributes them from
+              content patterns. Treat AE-quality flags as directional. For surgical AE
+              measurement on a specific call, paste the richer per-speaker transcript via Upload.
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-6 mb-6">
           {/* Criteria */}
           <div className="bg-white border border-ss-cyan-soft rounded-xl p-6">
