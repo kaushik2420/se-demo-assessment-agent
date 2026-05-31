@@ -25,7 +25,8 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import List, Optional
+from datetime import datetime, timezone
+from typing import List, Optional, Union
 
 import requests
 
@@ -120,19 +121,45 @@ class GranolaClient:
 
     def list_notes_since(
         self,
-        created_after: str,
+        created_after: Union[str, datetime],
         page_size: int = 30,
         max_pages: int = 20,
     ) -> List[GranolaNote]:
         """
-        List all notes created since `created_after` (ISO8601 date or datetime).
+        List all notes created since `created_after`. Accepts a datetime
+        (preferred) or a pre-formatted string. Datetimes are normalized to
+        ISO 8601 in UTC with 'Z' suffix and no microseconds, which is what
+        Granola's API accepts.
+
         Walks the cursor pagination until no more pages or max_pages hit.
         """
+        # Normalize to Granola's accepted format
+        if isinstance(created_after, datetime):
+            dt = created_after
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            date_str = dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        else:
+            # String — strip any microseconds + convert +00:00 to Z
+            s = str(created_after)
+            if "." in s:  # has microseconds: 2026-05-24T16:00:06.545874+00:00
+                # Split at '.' and keep everything before, then add timezone back
+                pre, _, rest = s.partition(".")
+                # rest looks like "545874+00:00" — find the timezone offset
+                for sep in ("+", "-", "Z"):
+                    idx = rest.find(sep)
+                    if idx > 0:
+                        s = pre + rest[idx:]
+                        break
+                else:
+                    s = pre  # fallback: no tz found
+            date_str = s.replace("+00:00", "Z")
+
         out: List[GranolaNote] = []
         cursor = None
         for _ in range(max_pages):
             params = {
-                "created_after": created_after,
+                "created_after": date_str,
                 "page_size": min(max(page_size, 1), 30),
             }
             if cursor:

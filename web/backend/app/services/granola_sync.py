@@ -155,8 +155,9 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
 
     try:
         client = GranolaClient()
-        # Granola accepts both YYYY-MM-DD and full ISO datetime
-        notes = client.list_notes_since(since.isoformat())
+        # Pass datetime directly — the client formats to Granola's required
+        # ISO 8601 + Z (no microseconds) format internally
+        notes = client.list_notes_since(since)
     except Exception as e:
         stats["errors"].append(f"list_notes_since failed: {e}")
         return stats
