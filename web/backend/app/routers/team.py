@@ -93,6 +93,30 @@ def list_users(db: Session = Depends(get_db)):
     ]
 
 
+# ----------------------------------------------------------------------------
+# Granola sync endpoints
+# ----------------------------------------------------------------------------
+
+@router.get("/granola/status",
+            dependencies=[Depends(require_role("admin", "manager"))])
+def granola_status():
+    """Snapshot of Granola sync state for the admin UI."""
+    from app.services.granola_sync import get_status
+    return get_status()
+
+
+@router.post("/granola/sync",
+             dependencies=[Depends(require_role("admin", "manager"))])
+def granola_sync_now():
+    """Manually trigger a Granola sync. Returns stats from the run."""
+    from app.services.granola_sync import run_sync
+    return run_sync()
+
+
+# ----------------------------------------------------------------------------
+# Users
+# ----------------------------------------------------------------------------
+
 @router.post("/users", response_model=CreateUserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     req: CreateUserRequest,
