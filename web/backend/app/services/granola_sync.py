@@ -242,6 +242,15 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
         return stats
 
     stats["notes_seen"] = len(notes)
+
+    # Diagnostic: which owners did the API return notes for? If this only ever
+    # contains the token-owner's email, the API is user-scoped — Granola won't
+    # return other workspace members' notes even if they're shared to a
+    # workspace folder. That requires a different (workspace-level) token.
+    owners_seen = sorted({n.owner_email for n in notes if n.owner_email})
+    stats["owners_seen"] = owners_seen
+    print(f"[granola_sync] notes_seen={len(notes)} owners={owners_seen!r}")
+
     llm = LLMClient(live=bool(os.getenv("ANTHROPIC_API_KEY")))
 
     db: Session = SessionLocal()
@@ -268,20 +277,28 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
                 stats["errors"].append(f"get_note {note_meta.id}: {e}")
                 continue
 
-            # Folder filter (optional)
-            # Case-insensitive + whitespace-tolerant so minor differences in how
-            # Granola surfaces the folder name (e.g. "Calls For Analysis" vs
-            # "calls for analysis") don't reject legit notes. We also log the
-            # actual folder_membership so we can debug rejections when they
-            # genuinely belong to a different folder.
+            # Folder filter (strict).
+            #
+            # Notes must explicitly live in GRANOLA_FOLDER_NAME (default
+            # "Calls for analysis"). Match is case-insensitive + whitespace
+            # tolerant. Notes with empty folder_membership are PERSONAL notes
+            # — they have not been opted in by the SE and must be rejected.
+            #
+            # We log every rejection with the actual folder_membership and
+            # raw-note keys so we can see WHY a given note got skipped
+            # (and notice if Granola is putting folder info somewhere else).
             if GRANOLA_FOLDER_NAME:
                 wanted = GRANOLA_FOLDER_NAME.strip().casefold()
                 seen_raw = [(f.get("name") or "") for f in note.folder_membership]
                 seen_norm = [n.strip().casefold() for n in seen_raw]
                 if wanted not in seen_norm:
+                    folder_ish = {k: v for k, v in (note.raw or {}).items()
+                                  if "folder" in k.lower()}
                     print(f"[granola_sync] skipped_folder_filter note={note.id!r} "
-                          f"title={note.title!r} wanted={GRANOLA_FOLDER_NAME!r} "
-                          f"seen={seen_raw!r}")
+                          f"title={note.title!r} owner={note.owner_email!r} "
+                          f"wanted={GRANOLA_FOLDER_NAME!r} seen={seen_raw!r} "
+                          f"raw_keys={list((note.raw or {}).keys())} "
+                          f"folder_ish={folder_ish!r}")
                     stats["skipped_folder_filter"] += 1
                     continue
 
