@@ -269,9 +269,19 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
                 continue
 
             # Folder filter (optional)
+            # Case-insensitive + whitespace-tolerant so minor differences in how
+            # Granola surfaces the folder name (e.g. "Calls For Analysis" vs
+            # "calls for analysis") don't reject legit notes. We also log the
+            # actual folder_membership so we can debug rejections when they
+            # genuinely belong to a different folder.
             if GRANOLA_FOLDER_NAME:
-                folder_names = [(f.get("name") or "").strip() for f in note.folder_membership]
-                if GRANOLA_FOLDER_NAME not in folder_names:
+                wanted = GRANOLA_FOLDER_NAME.strip().casefold()
+                seen_raw = [(f.get("name") or "") for f in note.folder_membership]
+                seen_norm = [n.strip().casefold() for n in seen_raw]
+                if wanted not in seen_norm:
+                    print(f"[granola_sync] skipped_folder_filter note={note.id!r} "
+                          f"title={note.title!r} wanted={GRANOLA_FOLDER_NAME!r} "
+                          f"seen={seen_raw!r}")
                     stats["skipped_folder_filter"] += 1
                     continue
 

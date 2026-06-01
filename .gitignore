@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+.AppleDouble
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Environments
+.env
+.env.local
+.env.*.local
+
+# Local DB
+*.db
+*.sqlite3
+
+# Local runtime
+inbox/
+out/
+
+# Node / Next.js
+node_modules/
+.next/
+out-next/
+.vercel/
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
