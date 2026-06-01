@@ -4,17 +4,46 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { TopNav } from "@/components/TopNav";
 import { InfoIcon } from "@/components/MethodologyDrawer";
+import { RecentCalls } from "@/components/RecentCalls";
 
 const fetcher = (url: string) => api(url);
 
 const MEDAL = ["🥇", "🥈"];
 
+/** Raw shape returned by /calls — we adapt to the RecentCalls component shape. */
+type RawCall = {
+  call_id: string;
+  se_name: string;
+  prospect_company: string;
+  call_type: string;
+  cx_maturity: string | null;
+  weighted_final: number | null;
+  date: string | null;
+  duration_min: number | null;
+};
+
+function mapCalls(raw: RawCall[]) {
+  return (raw || []).map((c) => ({
+    call_id: c.call_id,
+    prospect: c.prospect_company || "—",
+    type: c.call_type,
+    score: c.weighted_final,
+    cx_maturity: c.cx_maturity,
+    duration_min: c.duration_min,
+    date: c.date ? c.date.slice(0, 10) : "—",
+    se_name: c.se_name,
+  }));
+}
+
 export default function ManagerPage() {
   const { data, error, isLoading } = useSWR<any>("/dashboard/manager", fetcher);
+  const { data: rawCalls } = useSWR<RawCall[]>("/calls", fetcher);
+
   if (isLoading) return (<><TopNav /><div className="p-10 text-ss-navy-soft">Loading…</div></>);
   if (error) return (<><TopNav /><div className="p-10 text-red-600">Failed: {String(error)}</div></>);
 
   const { team_metrics, leaderboard, demo_of_the_month } = data;
+  const teamCalls = mapCalls(rawCalls || []);
 
   return (
     <>
@@ -113,6 +142,16 @@ export default function ManagerPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* === ALL TEAM CALLS — click any row to open the full scorecard === */}
+      <div className="mt-8">
+        <RecentCalls
+          calls={teamCalls}
+          showSE
+          title="All team calls"
+          emptyMessage="No team calls analyzed yet."
+        />
       </div>
     </main>
     </>

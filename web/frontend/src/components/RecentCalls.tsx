@@ -10,6 +10,7 @@ type Call = {
   cx_maturity: string | null;
   duration_min?: number | null;
   date: string;
+  se_name?: string | null;  // shown on the manager view (when showSE=true)
 };
 
 const PAGE_SIZE = 15;
@@ -42,7 +43,18 @@ function scoreColor(score: number | null): string {
   return "text-red-600";
 }
 
-export function RecentCalls({ calls }: { calls: Call[] }) {
+export function RecentCalls({
+  calls,
+  showSE = false,
+  title = "Recent calls",
+  emptyMessage = "No calls yet — upload your first transcript above.",
+}: {
+  calls: Call[];
+  /** Show "SE" column/badge — turn on for manager / cross-team views */
+  showSE?: boolean;
+  title?: string;
+  emptyMessage?: string;
+}) {
   const [view, setView] = useState<"card" | "table">("card");
   const [page, setPage] = useState(1);
 
@@ -53,8 +65,8 @@ export function RecentCalls({ calls }: { calls: Call[] }) {
   if (!calls || calls.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-ss-cyan-soft p-6">
-        <h2 className="font-semibold text-ss-navy mb-2">Recent calls</h2>
-        <p className="text-ss-navy-soft italic">No calls yet — upload your first transcript above.</p>
+        <h2 className="font-semibold text-ss-navy mb-2">{title}</h2>
+        <p className="text-ss-navy-soft italic">{emptyMessage}</p>
       </div>
     );
   }
@@ -63,7 +75,7 @@ export function RecentCalls({ calls }: { calls: Call[] }) {
     <div className="bg-white rounded-xl border border-ss-cyan-soft p-6">
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="font-semibold text-ss-navy">Recent calls</h2>
+          <h2 className="font-semibold text-ss-navy">{title}</h2>
           <p className="text-xs text-ss-navy-soft mt-0.5">
             {calls.length} total · showing {pageCalls.length} of {calls.length}
           </p>
@@ -95,6 +107,7 @@ export function RecentCalls({ calls }: { calls: Call[] }) {
                 </div>
               </div>
               <div className="text-xs text-ss-navy-soft mb-3">
+                {showSE && c.se_name ? <><span className="font-semibold text-ss-navy">{c.se_name}</span> · </> : null}
                 {c.date}{c.duration_min ? ` · ${c.duration_min} min` : ""}
               </div>
               <div className="flex gap-1.5 flex-wrap">
@@ -113,6 +126,7 @@ export function RecentCalls({ calls }: { calls: Call[] }) {
           <table className="w-full text-sm">
             <thead className="bg-ss-cream text-xs font-semibold text-ss-navy-soft uppercase tracking-wider">
               <tr>
+                {showSE && <th className="text-left px-3 py-2.5">SE</th>}
                 <th className="text-left px-3 py-2.5">Prospect</th>
                 <th className="text-left px-3 py-2.5">Date</th>
                 <th className="text-left px-3 py-2.5">Type</th>
@@ -125,6 +139,7 @@ export function RecentCalls({ calls }: { calls: Call[] }) {
                 <tr key={c.call_id}
                   className="border-t border-ss-cyan-soft hover:bg-ss-cream transition cursor-pointer"
                   onClick={() => window.location.href = `/call/${c.call_id}`}>
+                  {showSE && <td className="px-3 py-2.5 text-ss-navy whitespace-nowrap">{c.se_name || "—"}</td>}
                   <td className="px-3 py-2.5 font-medium text-ss-navy">{c.prospect}</td>
                   <td className="px-3 py-2.5 text-xs text-ss-navy-soft whitespace-nowrap">{c.date}</td>
                   <td className="px-3 py-2.5">
