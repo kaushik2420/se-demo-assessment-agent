@@ -18,14 +18,14 @@ import string
 from datetime import datetime, timezone
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from app.auth import hash_password
 from app.db import get_db
 from app.deps import CurrentUser, get_current_user, require_role
-from app.models import User
+from app.models import Call, User
 
 
 router = APIRouter()
@@ -111,6 +111,59 @@ def notion_status():
     """Snapshot of Notion integration state for the admin UI."""
     from app.services.notion_sync import get_status
     return get_status()
+
+
+@router.post("/notion/backfill",
+             dependencies=[Depends(require_role("admin"))])
+def notion_backfill(
+    limit: int = Query(50, le=200, description="Max calls to backfill in one run"),
+    db: Session = Depends(get_db),
+):
+    """
+    One-shot backfill: push already-analyzed calls into Notion.
+    Admin-only. Idempotent — dedupes on (Customer Name, Date), so safe to re-run.
+    Processes up to `limit` calls (newest-first); call again to continue if more remain.
+    """
+    from app.services.notion_sync import push_call
+
+    calls = (db.query(Call).filter(Call.scorecard.has())
+               .order_by(Call.created_at.desc()).limit(limit).all())
+
+    stats = {
+        "total_considered": len(calls),
+        "created": 0, "updated": 0, "skipped": 0, "errors": [],
+        "details": [],
+    }
+
+    for c in calls:
+        try:
+            result = push_call(
+                call_data={
+                    "prospect_company": c.prospect_company,
+                    "call_date": c.call_date or c.created_at,
+                    "call_type": c.call_type,
+                    "se_name": c.se_name,
+                    "ae_name": c.ae_name,
+                    "stated_use_case": c.stated_use_case,
+                },
+                insights=(c.insights.data if c.insights else None),
+            )
+            entry = {"call_id": c.call_id, "prospect": c.prospect_company,
+                     "result": result.get("action") or "skipped",
+                     "reason": result.get("reason")}
+            stats["details"].append(entry)
+            if not result.get("pushed"):
+                stats["skipped"] += 1
+                if result.get("reason"):
+                    stats["errors"].append(f"{c.prospect_company}: {result['reason']}")
+            elif result.get("action") == "created":
+                stats["created"] += 1
+            elif result.get("action") == "updated":
+                stats["updated"] += 1
+        except Exception as e:
+            stats["errors"].append(f"{c.prospect_company}: {e}")
+
+    return stats
 
 
 @router.post("/granola/sync",
