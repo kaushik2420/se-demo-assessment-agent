@@ -39,6 +39,46 @@ from src.integrations.slack_client import SlackClient, build_message_url
 STALENESS_DAYS = 15
 REMINDER_COOLDOWN_DAYS = 7   # don't re-remind the same row within this window
 
+# Admin gets a DM on every @SE Coach tag with the outcome (✅ or ❌).
+# Useful while we're debugging — set to empty string to disable.
+ADMIN_NOTIFY_EMAIL = os.getenv("ADMIN_NOTIFY_EMAIL", "kaushik.natarajan@surveysparrow.com")
+
+
+def _find_user_id_by_email(email: str) -> Optional[str]:
+    """Look up a Slack user ID by their email address."""
+    if not email or not os.getenv("SLACK_BOT_TOKEN"):
+        return None
+    try:
+        import requests as _req
+        r = _req.get(
+            "https://slack.com/api/users.lookupByEmail",
+            headers={"Authorization": f"Bearer {os.getenv('SLACK_BOT_TOKEN')}"},
+            params={"email": email}, timeout=10,
+        )
+        if not r.ok:
+            return None
+        data = r.json()
+        return data.get("user", {}).get("id") if data.get("ok") else None
+    except Exception:
+        return None
+
+
+def _dm_admin(message: str):
+    """Best-effort DM to the admin notify email. Silent on failure."""
+    if not ADMIN_NOTIFY_EMAIL:
+        return
+    try:
+        slack = SlackClient()
+        user_id = _find_user_id_by_email(ADMIN_NOTIFY_EMAIL)
+        if not user_id:
+            print(f"[tracker] admin DM skipped — no Slack user found for {ADMIN_NOTIFY_EMAIL}")
+            return
+        dm_channel = slack.open_dm(user_id)
+        slack.post_message(dm_channel, message)
+        print(f"[tracker] admin DM sent to {ADMIN_NOTIFY_EMAIL}")
+    except Exception as e:
+        print(f"[tracker] admin DM failed: {e}")
+
 
 # -------------------------------------------------------------------------
 # Public — webhook handler entry point
@@ -57,14 +97,24 @@ def handle_app_mention(event: dict, team_id: Optional[str] = None) -> dict:
     event_ts = event.get("ts")
 
     if not (channel and user_id and thread_ts):
+        _dm_admin(f"❌ *Tracker failed* — missing required fields (channel/user/thread_ts) in Slack event.")
         return {"ok": False, "reason": "missing channel/user/thread_ts"}
+
+    print(f"[tracker] processing app_mention: channel={channel} user={user_id} thread_ts={thread_ts}")
 
     try:
         slack = SlackClient()
         thread_msgs = slack.fetch_thread(channel, thread_ts)
+        print(f"[tracker] fetched {len(thread_msgs)} messages from thread")
         tagger = slack.get_user_info(user_id)
+        print(f"[tracker] tagger: {tagger.get('name')} <{tagger.get('email')}>")
         channel_info = slack.get_channel_info(channel)
+        print(f"[tracker] channel: #{channel_info.get('name')}")
     except Exception as e:
+        print(f"[tracker] slack API error: {e}")
+        _dm_admin(f"❌ *Tracker failed* — Slack API error: `{e}`\n"
+                  f"Channel: <#{channel}> · Thread ts: `{thread_ts}`\n"
+                  f"_Common cause: bot not invited to the channel. Try `/invite @SE Coach` there._")
         return {"ok": False, "reason": f"slack api: {e}"}
 
     se_email = tagger.get("email") or ""
@@ -92,17 +142,34 @@ def handle_app_mention(event: dict, team_id: Optional[str] = None) -> dict:
         llm = LLMClient(live=bool(os.getenv("ANTHROPIC_API_KEY")))
 
         if existing:
-            # UPDATE: extract what's NEW since the existing snapshot, append
-            extracted = _extract_update(llm, thread_text, existing)
-            _append_comment(existing, extracted.get("new_context", ""))
-            if extracted.get("eta") and not existing.eta:
-                existing.eta = _parse_date(extracted["eta"])
-            existing.last_updated_at = datetime.now(timezone.utc)
-            db.commit()
+            print(f"[tracker] thread already tracked as row #{existing.id}; appending update")
+            try:
+                extracted = _extract_update(llm, thread_text, existing)
+                print(f"[tracker] extracted update: {extracted}")
+                _append_comment(existing, extracted.get("new_context", ""))
+                if extracted.get("eta") and not existing.eta:
+                    existing.eta = _parse_date(extracted["eta"])
+                existing.last_updated_at = datetime.now(timezone.utc)
+                db.commit()
+            except Exception as e:
+                _dm_admin(f"❌ *Tracker update failed* for row #{existing.id} ({existing.details or '(no details)'}): `{e}`")
+                raise
+            _dm_admin(
+                f"✅ *Tracker updated* (row #{existing.id})\n"
+                f"• Channel: <#{channel}>  ({channel_info.get('name', '?')})\n"
+                f"• SE: {se_name}\n"
+                f"• Request: {existing.details or '(no details)'}\n"
+                f"• New context appended: _{extracted.get('new_context', '(none)')[:200]}_"
+            )
             return {"ok": True, "action": "updated", "id": existing.id}
         else:
-            # CREATE: full extraction
-            extracted = _extract_full(llm, thread_text, se_name, participant_emails)
+            print(f"[tracker] new thread; running full extraction")
+            try:
+                extracted = _extract_full(llm, thread_text, se_name, participant_emails)
+                print(f"[tracker] extracted: {extracted}")
+            except Exception as e:
+                _dm_admin(f"❌ *Tracker extraction failed* for new thread in <#{channel}>: `{e}`")
+                raise
             row = TrackerRequest(
                 thread_ts=thread_ts,
                 channel_id=channel,
@@ -119,6 +186,16 @@ def handle_app_mention(event: dict, team_id: Optional[str] = None) -> dict:
                 last_updated_at=datetime.now(timezone.utc),
             )
             db.add(row); db.commit()
+            print(f"[tracker] CREATED row #{row.id} for thread {thread_ts}")
+            _dm_admin(
+                f"✅ *Tracker created* (row #{row.id})\n"
+                f"• Channel: <#{channel}>  ({channel_info.get('name', '?')})\n"
+                f"• SE: {se_name}\n"
+                f"• Engineer: {extracted.get('engineer_name') or '(unknown)'}\n"
+                f"• Request: {extracted.get('details') or '(no details)'}\n"
+                f"• ETA: {extracted.get('eta') or '(none)'}\n"
+                f"• View: <{os.getenv('PORTAL_URL', 'https://se-demo-assessment-agent.vercel.app')}/tracker|Open tracker>"
+            )
             return {"ok": True, "action": "created", "id": row.id}
     finally:
         db.close()

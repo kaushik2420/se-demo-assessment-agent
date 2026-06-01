@@ -50,11 +50,36 @@ async def slack_events(
 
     # Slack retries if we don't ack within 3s. Process the event in background.
     event_wrapper = body_json.get("event") or {}
+    event_type = event_wrapper.get("type")
     team_id = body_json.get("team_id")
-    if event_wrapper.get("type") == "app_mention":
+    print(f"[slack] event received: type={event_type!r} "
+          f"channel={event_wrapper.get('channel')!r} "
+          f"user={event_wrapper.get('user')!r} "
+          f"thread_ts={event_wrapper.get('thread_ts')!r} "
+          f"ts={event_wrapper.get('ts')!r}")
+
+    if event_type == "app_mention":
         from app.services.slack_tracker import handle_app_mention
-        bg.add_task(handle_app_mention, event_wrapper, team_id)
+
+        def _wrapped_handler():
+            try:
+                result = handle_app_mention(event_wrapper, team_id)
+                print(f"[slack] handle_app_mention returned: {result}")
+            except Exception as e:
+                import traceback
+                print(f"[slack] handle_app_mention CRASHED: {e}")
+                traceback.print_exc()
+                # Best-effort DM to admin so they don't have to check Render logs
+                try:
+                    from app.services.slack_tracker import _dm_admin
+                    _dm_admin(f"❌ *Tracker handler CRASHED* — `{type(e).__name__}: {e}`\n"
+                              f"Check Render logs for full traceback.")
+                except Exception:
+                    pass
+
+        bg.add_task(_wrapped_handler)
         return {"ok": True}
 
     # Unknown event type — ignore but ack
-    return {"ok": True, "ignored": event_wrapper.get("type")}
+    print(f"[slack] ignoring event type {event_type!r}")
+    return {"ok": True, "ignored": event_type}
