@@ -358,6 +358,7 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
                     sub_scores=sc["scores"],
                     qualitative=sc["qualitative"],
                     weights_applied=sc.get("weights_applied", {}),
+                    not_assessable=sc.get("not_assessable", {}),
                     prompt_version=sc["prompt_version"],
                 ))
                 db.add(Insights(

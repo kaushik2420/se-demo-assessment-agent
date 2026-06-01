@@ -104,6 +104,7 @@ def get_call(
             "scores": c.scorecard.sub_scores,
             "qualitative": c.scorecard.qualitative,
             "weights_applied": c.scorecard.weights_applied,
+            "not_assessable": c.scorecard.not_assessable or {},
             "prompt_version": c.scorecard.prompt_version,
         }),
         insights=(c.insights and c.insights.data),

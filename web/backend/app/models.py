@@ -64,6 +64,9 @@ class Scorecard(Base):
     sub_scores: Mapped[dict] = mapped_column(JSON)            # nested scores with evidence
     qualitative: Mapped[dict] = mapped_column(JSON)           # strengths / gaps / coaching action
     weights_applied: Mapped[dict] = mapped_column(JSON)       # which call-type profile was used
+    # Visual-only sub-criteria the model couldn't assess from transcript;
+    # shape: {criterion_name: [sub_name, ...]}. Excluded from weighted_final.
+    not_assessable: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     prompt_version: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 

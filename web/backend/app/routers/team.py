@@ -182,6 +182,46 @@ def granola_sync_now(bg: BackgroundTasks):
 
 
 # ----------------------------------------------------------------------------
+# Re-analysis (re-score + re-extract under current prompt versions)
+# ----------------------------------------------------------------------------
+
+@router.get("/reanalyze/status",
+            dependencies=[Depends(require_role("admin"))])
+def reanalyze_status():
+    """Current prompt versions + last run stats + in-progress flag."""
+    from app.services.reanalyze import get_status
+    return get_status()
+
+
+@router.post("/reanalyze",
+             dependencies=[Depends(require_role("admin"))])
+def reanalyze_now(
+    bg: BackgroundTasks,
+    mode: str = Query("outdated", pattern="^(outdated|all)$",
+                      description="'outdated' (default) only re-runs calls on older prompts; 'all' forces every call"),
+    limit: Optional[int] = Query(None, description="Cap on calls processed in this run"),
+):
+    """Kick off re-analysis as a background task. Admin only.
+    Poll /team/reanalyze/status for progress and results."""
+    from app.services.reanalyze import is_in_progress, run_reanalysis
+    if is_in_progress():
+        return {"status": "already_running",
+                "message": "A re-analysis is already running. Poll status for results."}
+
+    def _runner():
+        try:
+            run_reanalysis(mode=mode, limit=limit)
+        except Exception as e:
+            import traceback
+            print(f"[reanalyze] CRASHED: {e}")
+            traceback.print_exc()
+
+    bg.add_task(_runner)
+    return {"status": "started", "mode": mode, "limit": limit,
+            "message": "Re-analysis started in background. Refresh status to see progress."}
+
+
+# ----------------------------------------------------------------------------
 # Users
 # ----------------------------------------------------------------------------
 

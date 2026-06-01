@@ -132,6 +132,7 @@ async def upload_transcript(
         sub_scores=scorecard_data["scores"],
         qualitative=scorecard_data["qualitative"],
         weights_applied=scorecard_data.get("weights_applied", {}),
+        not_assessable=scorecard_data.get("not_assessable", {}),
         prompt_version=scorecard_data["prompt_version"],
     ))
     db.add(Insights(

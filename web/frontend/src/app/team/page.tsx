@@ -4,6 +4,7 @@ import useSWR from "swr";
 import { api } from "@/lib/api";
 import { TopNav } from "@/components/TopNav";
 import { GranolaSyncCard } from "@/components/GranolaSyncCard";
+import { ReanalyzeCard } from "@/components/ReanalyzeCard";
 
 type User = {
   id: number;
@@ -112,6 +113,13 @@ export default function TeamPage() {
         <div className="mb-6">
           <GranolaSyncCard />
         </div>
+
+        {/* Re-analyze under current prompts — admin only */}
+        {me?.role === "admin" && (
+          <div className="mb-6">
+            <ReanalyzeCard />
+          </div>
+        )}
 
         {/* Existing users */}
         <div className="bg-white border border-ss-cyan-soft rounded-xl overflow-hidden mt-2">

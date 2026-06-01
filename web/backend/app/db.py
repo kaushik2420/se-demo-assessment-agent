@@ -51,6 +51,11 @@ def init_db():
             conn.execute(text(
                 "CREATE INDEX IF NOT EXISTS idx_calls_external_id ON calls(external_id)"
             ))
+            # not_assessable was added in v2 prompts (Jun 2026) — visual sub-criteria
+            # that Claude couldn't score from a transcript-only call.
+            conn.execute(text(
+                "ALTER TABLE scorecards ADD COLUMN IF NOT EXISTS not_assessable JSON"
+            ))
             conn.commit()
         except Exception as e:
             print(f"[init_db] non-fatal: {e}")
