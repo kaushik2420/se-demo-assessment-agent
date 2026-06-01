@@ -105,6 +105,14 @@ def granola_status():
     return get_status()
 
 
+@router.get("/notion/status",
+            dependencies=[Depends(require_role("admin", "manager"))])
+def notion_status():
+    """Snapshot of Notion integration state for the admin UI."""
+    from app.services.notion_sync import get_status
+    return get_status()
+
+
 @router.post("/granola/sync",
              dependencies=[Depends(require_role("admin", "manager"))])
 def granola_sync_now(bg: BackgroundTasks):

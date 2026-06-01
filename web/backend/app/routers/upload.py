@@ -141,6 +141,23 @@ async def upload_transcript(
     ))
     db.commit()
 
+    # 6. Best-effort push to Notion tracker (no-op if not configured)
+    try:
+        from app.services.notion_sync import push_call
+        push_call(
+            call_data={
+                "prospect_company": prospect_company,
+                "call_date": call.call_date,
+                "call_type": call_type,
+                "se_name": se.name,
+                "ae_name": ae_name,
+                "stated_use_case": stated_use_case,
+            },
+            insights=insights_data,
+        )
+    except Exception as e:
+        print(f"[upload] notion push failed: {e}")
+
     return UploadResponse(
         accepted=True,
         call_id=call_id,

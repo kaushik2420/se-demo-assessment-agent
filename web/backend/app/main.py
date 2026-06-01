@@ -38,6 +38,21 @@ app = FastAPI(
 def _startup():
     # Auto-create tables on boot (idempotent). For real migrations, swap to Alembic.
     init_db()
+    # Schedule Granola auto-sync every 30 minutes (skips silently if no API key)
+    if os.getenv("GRANOLA_API_KEY"):
+        try:
+            from apscheduler.schedulers.background import BackgroundScheduler
+            from app.services.granola_sync import run_sync
+            scheduler = BackgroundScheduler(timezone="UTC")
+            scheduler.add_job(run_sync, "interval", minutes=30,
+                              id="granola_sync", max_instances=1,
+                              coalesce=True, misfire_grace_time=600)
+            scheduler.start()
+            print("[scheduler] Granola auto-sync every 30 min — enabled")
+        except Exception as e:
+            print(f"[scheduler] failed to start Granola auto-sync: {e}")
+    else:
+        print("[scheduler] GRANOLA_API_KEY not set — auto-sync disabled")
 
 
 _origins = [o.strip() for o in os.getenv(

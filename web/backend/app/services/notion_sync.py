@@ -1,0 +1,173 @@
+"""
+Push analyzed calls to the Notion Demo Tracker.
+
+Called after a call is successfully analyzed (Granola sync or manual upload).
+Maps our internal data → Notion properties, handles dedupe by customer + date,
+and respects manual SE edits (won't overwrite filled fields).
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+# Ensure src/ is on path
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from src.integrations.notion_client import NotionClient, build_property
+
+
+# Map our internal call_type → the closest existing value in the Notion tracker.
+CALL_TYPE_TO_NOTION = {
+    "demo":             "New demo",
+    "followup_demo":    "Follow up query call/Demo",
+    "followup_query":   "Follow up query call/Demo",
+    "poc":              "Onboarding/Assisstance Call",
+    "closure":          "Follow up query call/Demo",
+    "other":            "New demo",
+}
+
+
+def push_call(call_data: dict, insights: Optional[dict] = None) -> dict:
+    """
+    Push a single call to Notion. Returns a status dict for logging.
+
+    call_data shape (from Call ORM + scorecard):
+        {
+          "prospect_company": "...", "call_date": datetime, "call_type": "demo",
+          "se_name": "...", "ae_name": "...", "stated_use_case": "...",
+        }
+    insights: full 9-signal blob (optional but improves coverage)
+    """
+    if not os.getenv("NOTION_API_KEY") or not os.getenv("NOTION_DATABASE_ID"):
+        return {"pushed": False, "reason": "Notion env vars not set"}
+
+    try:
+        client = NotionClient()
+        schema = client.get_schema()
+    except Exception as e:
+        return {"pushed": False, "reason": f"Notion init failed: {e}"}
+
+    # Build Notion properties using the live schema
+    props = _build_properties(call_data, insights or {}, schema)
+    if not props:
+        return {"pushed": False, "reason": "No mappable properties"}
+
+    customer = call_data.get("prospect_company") or ""
+    call_date = call_data.get("call_date") or datetime.now(timezone.utc)
+
+    try:
+        existing = client.find_row(customer, call_date)
+        if existing:
+            result = client.update_page(existing, props, only_if_blank=True)
+            return {"pushed": True, "action": "updated", "page_id": existing,
+                    "fields_updated": result.get("fields", [])}
+        else:
+            page_id = client.create_page(props)
+            return {"pushed": True, "action": "created", "page_id": page_id,
+                    "fields_created": list(props.keys())}
+    except Exception as e:
+        return {"pushed": False, "reason": f"Notion API error: {e}"}
+
+
+def _build_properties(call: dict, insights: dict, schema: dict) -> dict:
+    """Map our data to Notion properties, respecting schema field types."""
+    out = {}
+
+    def set_field(name: str, value, prop_type: Optional[str] = None):
+        if name not in schema:
+            return  # field doesn't exist in this database
+        ptype = prop_type or schema[name]["type"]
+        options = schema[name].get("options", []) or []
+        payload = build_property(ptype, value, options=options)
+        if payload is not None:
+            out[name] = payload
+
+    # Customer Name (title)
+    set_field("Customer Name", call.get("prospect_company"))
+
+    # Date
+    call_date = call.get("call_date")
+    if call_date:
+        set_field("Date", call_date)
+
+    # Call Type / No Shows
+    ct = call.get("call_type", "demo")
+    set_field("Call Type/No Shows", CALL_TYPE_TO_NOTION.get(ct, "New demo"))
+
+    # SE Name
+    set_field("SE Name", _first_name(call.get("se_name")))
+
+    # AE Name (only if we know it from manual upload — Granola can't reliably detect)
+    if call.get("ae_name"):
+        set_field("AE Name", _first_name(call["ae_name"]))
+
+    # Present Survey Provider (from competitors_mentioned)
+    competitors = insights.get("competitors_mentioned") or []
+    if competitors:
+        # First non-empty competitor name
+        for c in competitors:
+            name = (c or {}).get("name", "").strip()
+            if name and name.lower() not in ("none", "n/a", "unknown"):
+                set_field("Present Survey Provider", name)
+                break
+
+    # Timeline (from prospect_engagement buying signals — try to find a date hint)
+    pe = insights.get("prospect_engagement") or {}
+    timeline_hint = _extract_timeline_hint(pe.get("buying_signals", []))
+    if timeline_hint:
+        set_field("Timeline", timeline_hint)
+
+    # Product (default to SurveySparrow unless use_case mentions ThriveSparrow / SparrowDesk)
+    use_case = (insights.get("use_case") or {}).get("summary", "")
+    product = _infer_product(use_case)
+    if product:
+        set_field("Product", product)
+
+    return out
+
+
+def _first_name(full_name: Optional[str]) -> Optional[str]:
+    if not full_name:
+        return None
+    return full_name.strip().split()[0]
+
+
+def _extract_timeline_hint(signals: list) -> Optional[str]:
+    """Look for date/timeline mentions in buying signals."""
+    if not signals:
+        return None
+    import re
+    # Match patterns like "by Q3", "end of June", "March 31", "next quarter"
+    month_re = re.compile(
+        r"\b(January|February|March|April|May|June|July|August|September|October|November|December|Q[1-4])\b",
+        re.IGNORECASE
+    )
+    for s in signals:
+        if isinstance(s, str) and month_re.search(s):
+            return s[:200]
+    return None
+
+
+def _infer_product(use_case: str) -> Optional[str]:
+    if not use_case:
+        return None
+    u = use_case.lower()
+    if "thrive" in u or "360" in u or "engagement" in u or "performance review" in u:
+        return "ThriveSparrow"
+    if "sparrowdesk" in u or "helpdesk" in u or "support ticket" in u:
+        return "SparrowDesk"
+    return "SurveySparrow"
+
+
+def get_status() -> dict:
+    """Quick status snapshot for the Team page UI."""
+    return {
+        "configured": bool(os.getenv("NOTION_API_KEY") and os.getenv("NOTION_DATABASE_ID")),
+        "database_id": os.getenv("NOTION_DATABASE_ID", "")[:8] + "..." if os.getenv("NOTION_DATABASE_ID") else None,
+    }

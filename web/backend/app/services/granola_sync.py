@@ -320,6 +320,21 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
                 ))
                 db.commit()
                 stats["imported"] += 1
+                # Push to Notion tracker (best-effort, no-op if not configured)
+                try:
+                    from app.services.notion_sync import push_call
+                    push_result = push_call(
+                        call_data={
+                            "prospect_company": prospect, "call_date": call.call_date,
+                            "call_type": call_type, "se_name": se.name,
+                            "ae_name": None, "stated_use_case": note.title,
+                        },
+                        insights=ins,
+                    )
+                    if push_result.get("pushed") is False and push_result.get("reason") and "not set" not in push_result["reason"]:
+                        stats["errors"].append(f"notion push failed for {note.id}: {push_result['reason']}")
+                except Exception as e:
+                    stats["errors"].append(f"notion push exception for {note.id}: {e}")
             except Exception as e:
                 db.rollback()
                 stats["errors"].append(f"persist failed for note {note.id}: {e}")
