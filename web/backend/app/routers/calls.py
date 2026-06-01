@@ -21,7 +21,10 @@ class CallSummary(BaseModel):
     se_name: str
     prospect_company: str
     call_type: str
-    cx_maturity: str | None = None
+    cx_maturity: str | None = None        # legacy alias — same value as `maturity`
+    maturity: str | None = None
+    maturity_scope: str | None = None     # "CX" | "EX"
+    product: str | None = None            # "SurveySparrow" | "ThriveSparrow" | "SparrowDesk"
     weighted_final: float | None = None
     date: str | None = None
     duration_min: int | None = None
@@ -49,14 +52,22 @@ def list_calls(
 
     out = []
     for c in q.all():
-        cx = (c.insights.data.get("cx_maturity", {}).get("category")
-              if c.insights and c.insights.data else None)
+        ins = (c.insights.data if c.insights and c.insights.data else {}) or {}
+        # New shape: maturity.category + maturity.scope + product.primary.
+        # Old shape: cx_maturity.category (no scope/product).
+        mat = ins.get("maturity") or {}
+        category = mat.get("category") or (ins.get("cx_maturity", {}) or {}).get("category")
+        scope = mat.get("scope") or ("CX" if (ins.get("cx_maturity") or {}).get("category") else None)
+        product = (ins.get("product") or {}).get("primary")
         out.append(CallSummary(
             call_id=c.call_id,
             se_name=c.se_name,
             prospect_company=c.prospect_company,
             call_type=c.call_type,
-            cx_maturity=cx,
+            cx_maturity=category,
+            maturity=category,
+            maturity_scope=scope,
+            product=product,
             weighted_final=c.scorecard.weighted_final if c.scorecard else None,
             date=c.call_date.isoformat() if c.call_date else c.created_at.isoformat(),
             duration_min=c.duration_min,

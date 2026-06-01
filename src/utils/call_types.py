@@ -156,9 +156,17 @@ def get_profile(call_type: str | CallType) -> CallTypeProfile:
 
 
 def weighted_total_for_type(scores_by_criterion: Dict[str, Dict[str, float]], call_type: str | CallType) -> float:
-    """Compute final score using the weight profile for this call type."""
+    """Compute final score using the weight profile for this call type.
+
+    If an entire criterion is unscorable (no sub-criteria assessable from
+    transcript — e.g. all of Craftsmanship was visual-only on an audio call),
+    that criterion drops out and the REMAINING weights are rescaled to sum
+    to 100 so the SE isn't penalized for a transcript-only modality.
+    """
     profile = get_profile(call_type)
-    total = 0.0
+
+    # First pass: figure out which criteria are actually scorable
+    scorable: Dict[str, tuple[float, float]] = {}  # crit -> (weight, avg_score)
     for crit, weight in profile.weights.items():
         if weight == 0:
             continue
@@ -166,7 +174,17 @@ def weighted_total_for_type(scores_by_criterion: Dict[str, Dict[str, float]], ca
         if not subs:
             continue
         avg = sum(subs.values()) / len(subs)
-        total += (weight / 100.0) * avg
+        scorable[crit] = (weight, avg)
+
+    if not scorable:
+        return 0.0
+
+    # Rescale: remaining weights should sum to 100
+    weight_sum = sum(w for w, _ in scorable.values())
+    total = 0.0
+    for _, (weight, avg) in scorable.items():
+        rescaled = weight / weight_sum  # already in [0, 1]
+        total += rescaled * avg
     return round(total, 2)
 
 

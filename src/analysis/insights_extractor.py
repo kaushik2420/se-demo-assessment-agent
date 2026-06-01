@@ -36,6 +36,11 @@ def _mock_insights(ctx: CallContext) -> dict:
     category, _ = classify_from_scorecard(scorecard)
 
     return {
+        "product": {
+            "primary": "SurveySparrow",
+            "secondary": [],
+            "evidence": "Discussion centered on NPS, customer feedback, journey-based surveys.",
+        },
         "use_case": {
             "summary": (
                 "Prospect wants relationship NPS across customer base with renewal-risk "
@@ -48,7 +53,8 @@ def _mock_insights(ctx: CallContext) -> dict:
                 else "We just need a form for our annual user conference",
             ],
         },
-        "cx_maturity": {
+        "maturity": {
+            "scope": "CX",
             "scorecard": scorecard,
             "category": category,
             "rationale": (
@@ -57,11 +63,17 @@ def _mock_insights(ctx: CallContext) -> dict:
                 else "Single touchpoint, no segmentation, no action loop discussed."
             ),
         },
+        "features_discussed": [
+            {"feature": "Relationship NPS with longitudinal tracking",
+             "context": "demoed", "quote": "SE walked through quarterly NPS pulse setup"},
+            {"feature": "Conditional logic for branching surveys",
+             "context": "asked_about", "quote": "Can we route to different questions by ARR tier?"},
+        ],
         "feature_requests": [
             {"feature": "Salesforce two-way sync for renewal-stage variables",
              "urgency": "blocker", "quote": "If it doesn't push back to SFDC opportunity, it's a no-go"},
-            {"feature": "Custom NPS-by-segment dashboard widget",
-             "urgency": "nice-to-have", "quote": "Would be nice to slice by ARR tier"},
+            {"feature": "Custom NPS-by-segment dashboard widget — currently can only slice by team",
+             "urgency": "nice-to-have", "quote": "Would be nice to slice by ARR tier — SE said not available today"},
         ],
         "competitors_mentioned": [
             {"name": "Qualtrics", "context": "evaluated", "quote": "We're comparing you with Qualtrics on price"},

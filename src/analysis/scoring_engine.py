@@ -104,16 +104,31 @@ def score_call(ctx: CallContext, llm: LLMClient | None = None) -> dict:
 
     raw = llm.chat_json(system, user, mock_response=_mock_scores(ctx))
 
-    # Compute weighted total using the call-type-specific weight profile
-    sub_scores: Dict[str, Dict[str, float]] = {
-        crit: {sub: payload["score"] for sub, payload in subs.items()}
-        for crit, subs in raw["scores"].items()
-    }
+    # Build sub_scores while honoring `not_assessable: true` — those sub-criteria
+    # are EXCLUDED from the per-criterion average (so weight redistributes to
+    # whatever IS assessable from the transcript), rather than getting a penalty
+    # score. If an entire criterion is fully not-assessable, the criterion
+    # itself drops out of the weighted total and remaining criteria are
+    # rescaled to sum to 100% (so the SE isn't penalized for transcript-only).
+    sub_scores: Dict[str, Dict[str, float]] = {}
+    not_assessable_log: Dict[str, list[str]] = {}
+    for crit, subs in raw["scores"].items():
+        kept: Dict[str, float] = {}
+        skipped: list[str] = []
+        for sub, payload in subs.items():
+            if payload.get("not_assessable") is True or payload.get("score") is None:
+                skipped.append(sub)
+                continue
+            kept[sub] = payload["score"]
+        sub_scores[crit] = kept
+        if skipped:
+            not_assessable_log[crit] = skipped
+
     final = weighted_total_for_type(sub_scores, ctx.call_type)
 
     # Industry benchmark comparison (uses default median, regardless of call type)
     per_crit_score = {
-        crit: round(sum(s.values()) / len(s), 2) for crit, s in sub_scores.items()
+        crit: round(sum(s.values()) / len(s), 2) for crit, s in sub_scores.items() if s
     }
     benchmark_gaps = {
         crit: gap_vs_industry(crit, score) for crit, score in per_crit_score.items()
@@ -129,6 +144,7 @@ def score_call(ctx: CallContext, llm: LLMClient | None = None) -> dict:
         "prompt_version": scoring_prompt.VERSION,
         "scores": raw["scores"],
         "per_criterion_score": per_crit_score,
+        "not_assessable": not_assessable_log,   # {criterion: [sub_name, ...]}
         "weighted_final": final,
         "industry_percentile": percentile_of(final),
         "industry_gaps": benchmark_gaps,

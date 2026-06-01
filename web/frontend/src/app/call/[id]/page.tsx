@@ -18,6 +18,20 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
   const { call, scorecard, insights } = data;
   if (!scorecard) return (<><TopNav /><div className="p-10 text-ss-navy-soft">Analysis pending…</div></>);
 
+  // Backward-compatible read: new shape has `insights.maturity` + `insights.product`;
+  // old calls have `insights.cx_maturity` only.
+  const maturityBlock = insights?.maturity || insights?.cx_maturity || null;
+  const maturityScope: string | null =
+    insights?.maturity?.scope || (insights?.cx_maturity ? "CX" : null);
+  const product: string | null = insights?.product?.primary || null;
+  const featuresDiscussed = insights?.features_discussed || [];
+  const featureRequests = insights?.feature_requests || [];
+  // Surface any sub-criteria the model couldn't assess from the transcript
+  const notAssessable: Record<string, string[]> = scorecard.not_assessable || {};
+  const notAssessableSubs = Object.entries(notAssessable).flatMap(([crit, subs]) =>
+    (subs as string[]).map((s) => `${crit} → ${s}`)
+  );
+
   return (
     <>
       <TopNav />
@@ -30,17 +44,32 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
               {call.date?.slice(0, 10)} · {call.duration_min} min · {call.call_type} · {call.source}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             <span className="px-3 py-1 bg-ss-cyan-soft text-ss-navy text-xs font-semibold rounded-full uppercase">
               {call.call_type}
             </span>
-            {insights?.cx_maturity && (
+            {product && (
+              <span className="px-3 py-1 bg-teal-100 text-teal-800 text-xs font-semibold rounded-full uppercase">
+                {product}
+              </span>
+            )}
+            {maturityBlock?.category && (
               <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full uppercase">
-                {insights.cx_maturity.category}
+                {maturityBlock.category}{maturityScope ? ` · ${maturityScope}` : ""}
               </span>
             )}
           </div>
         </div>
+
+        {/* Banner: which sub-criteria the analysis couldn't assess from transcript */}
+        {notAssessableSubs.length > 0 && (
+          <div className="mb-6 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 flex gap-2 items-start">
+            <span className="font-bold mt-0.5">ⓘ</span>
+            <div>
+              <strong>{notAssessableSubs.length} sub-criteria were not assessable from the transcript</strong> (typically visual signals when screen content wasn't verbally described). These were excluded from the weighted score rather than penalized: {notAssessableSubs.join(" · ")}.
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-4 gap-4 mb-6">
           <Stat label={<>Weighted Score<InfoIcon section="formula" /></>} value={`${scorecard.weighted_final} / 5`} />
@@ -121,17 +150,24 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
 
-        {/* 9 insights */}
+        {/* Deal-intelligence signals */}
         {insights && (
           <div className="bg-white border border-ss-cyan-soft rounded-xl p-6">
             <h3 className="font-semibold text-ss-navy mb-4">Deal-intelligence signals</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
+              <Insight title="Product" body={product || "Unknown"} />
+              <Insight title={`Maturity${maturityScope ? ` (${maturityScope})` : ""}`}
+                       body={maturityBlock ? `${maturityBlock.category} — ${maturityBlock.rationale || ""}` : "—"} />
               <Insight title="Use case" body={insights.use_case?.summary} />
-              <Insight title="CX maturity" body={`${insights.cx_maturity?.category} — ${insights.cx_maturity?.rationale || ""}`} />
-              <Insight title={`Feature requests (${insights.feature_requests?.length || 0})`}
-                       body={(insights.feature_requests || []).map((f: any) => f.feature).join(" · ")} />
               <Insight title="Competitors"
                        body={(insights.competitors_mentioned || []).map((c: any) => c.name).join(", ") || "—"} />
+              <Insight title={`Features discussed (${featuresDiscussed.length})`}
+                       body={featuresDiscussed.length === 0 ? "—" :
+                             featuresDiscussed.map((f: any) => f.feature).join(" · ")} />
+              <Insight title={`Feature requests / gaps (${featureRequests.length})`}
+                       body={featureRequests.length === 0 ? "—" :
+                             featureRequests.map((f: any) =>
+                               `${f.feature}${f.urgency ? ` [${f.urgency}]` : ""}`).join(" · ")} />
               <Insight title={`Trial issues (${insights.trial_issues?.length || 0})`}
                        body={(insights.trial_issues || []).map((t: any) => t.issue).join(" · ") || "—"} />
               <Insight title="SE selling style"

@@ -67,16 +67,33 @@ def se_dashboard(user: CurrentUser = Depends(get_current_user), db: Session = De
             "text": action.action_text, "set_by": action.set_by,
             "status": action.status, "month": action.month,
         } if action else None),
-        "recent_calls": [{
-            "call_id": c.call_id,
-            "prospect": c.prospect_company,
-            "type": c.call_type,
-            "score": c.scorecard.weighted_final if c.scorecard else None,
-            "cx_maturity": (c.insights.data.get("cx_maturity", {}).get("category")
-                            if c.insights else None),
-            "duration_min": c.duration_min,
-            "date": (c.call_date or c.created_at).strftime("%Y-%m-%d"),
-        } for c in calls],   # paginate client-side
+        "recent_calls": [_call_summary(c) for c in calls],   # paginate client-side
+    }
+
+
+def _call_summary(c: Call) -> dict:
+    """Shared shape for both SE + Manager recent-call lists.
+
+    Reads the NEW `maturity` + `product` insights keys but falls back to the
+    OLD `cx_maturity` shape for calls analyzed under the previous prompt.
+    """
+    ins = (c.insights.data if c.insights else {}) or {}
+    maturity_block = ins.get("maturity") or {}
+    maturity_category = maturity_block.get("category") or (ins.get("cx_maturity", {}) or {}).get("category")
+    maturity_scope = maturity_block.get("scope") or ("CX" if (ins.get("cx_maturity") or {}).get("category") else None)
+    product = (ins.get("product") or {}).get("primary")
+
+    return {
+        "call_id": c.call_id,
+        "prospect": c.prospect_company,
+        "type": c.call_type,
+        "score": c.scorecard.weighted_final if c.scorecard else None,
+        "maturity": maturity_category,        # new key
+        "maturity_scope": maturity_scope,     # "CX" | "EX"
+        "cx_maturity": maturity_category,     # legacy alias so old frontend keeps working
+        "product": product,
+        "duration_min": c.duration_min,
+        "date": (c.call_date or c.created_at).strftime("%Y-%m-%d"),
     }
 
 

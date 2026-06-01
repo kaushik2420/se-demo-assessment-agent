@@ -7,7 +7,14 @@ type Call = {
   prospect: string;
   type: string;
   score: number | null;
+  /** Legacy: same value as `maturity`. Keep for back-compat with older data. */
   cx_maturity: string | null;
+  /** New field — the actual maturity category (Form / Basic, Low Maturity, etc.) */
+  maturity?: string | null;
+  /** "CX" | "EX" — which framework the maturity score is on */
+  maturity_scope?: string | null;
+  /** "SurveySparrow" | "ThriveSparrow" | "SparrowDesk" */
+  product?: string | null;
   duration_min?: number | null;
   date: string;
   se_name?: string | null;  // shown on the manager view (when showSE=true)
@@ -26,13 +33,36 @@ function maturityClasses(level: string | null): string {
   return "bg-slate-100 text-slate-600";
 }
 
-function maturityShortLabel(level: string | null): string {
+function maturityShortLabel(level: string | null | undefined, scope?: string | null): string {
   if (!level) return "—";
-  if (level.toLowerCase().startsWith("form")) return "Form / Basic";
-  if (level.toLowerCase().startsWith("low")) return "Low Maturity";
-  if (level.toLowerCase().startsWith("potential")) return "Potential High";
-  if (level.toLowerCase().startsWith("high")) return "High Maturity";
-  return level;
+  const lc = level.toLowerCase();
+  let label = level;
+  if (lc.startsWith("form")) label = "Form / Basic";
+  else if (lc.startsWith("low")) label = "Low";
+  else if (lc.startsWith("potential")) label = "Potential High";
+  else if (lc.startsWith("high")) label = "High";
+  // Suffix with scope (CX or EX) when known
+  return scope ? `${label} · ${scope}` : label;
+}
+
+/** Product badge: SurveySparrow, ThriveSparrow, SparrowDesk */
+function productClasses(product: string | null | undefined): string {
+  if (!product) return "bg-slate-100 text-slate-600";
+  const p = product.toLowerCase();
+  if (p.includes("thrive")) return "bg-violet-100 text-violet-800";
+  if (p.includes("desk")) return "bg-orange-100 text-orange-800";
+  if (p.includes("survey")) return "bg-teal-100 text-teal-800";
+  return "bg-slate-100 text-slate-600";
+}
+
+function productShortLabel(product: string | null | undefined): string {
+  if (!product) return "—";
+  // Friendly short names
+  const p = product.toLowerCase();
+  if (p.includes("thrive")) return "ThriveSparrow";
+  if (p.includes("desk")) return "SparrowDesk";
+  if (p.includes("survey")) return "SurveySparrow";
+  return product;
 }
 
 function scoreColor(score: number | null): string {
@@ -114,8 +144,13 @@ export function RecentCalls({
                 <span className="px-2 py-0.5 bg-ss-cyan-soft text-ss-navy text-[10px] font-semibold rounded uppercase tracking-wide">
                   {c.type.replace("_", " ")}
                 </span>
-                <span className={`px-2 py-0.5 text-[10px] font-semibold rounded uppercase tracking-wide ${maturityClasses(c.cx_maturity)}`}>
-                  {maturityShortLabel(c.cx_maturity)}
+                {c.product && (
+                  <span className={`px-2 py-0.5 text-[10px] font-semibold rounded uppercase tracking-wide ${productClasses(c.product)}`}>
+                    {productShortLabel(c.product)}
+                  </span>
+                )}
+                <span className={`px-2 py-0.5 text-[10px] font-semibold rounded uppercase tracking-wide ${maturityClasses(c.maturity || c.cx_maturity)}`}>
+                  {maturityShortLabel(c.maturity || c.cx_maturity, c.maturity_scope)}
                 </span>
               </div>
             </Link>
@@ -130,7 +165,8 @@ export function RecentCalls({
                 <th className="text-left px-3 py-2.5">Prospect</th>
                 <th className="text-left px-3 py-2.5">Date</th>
                 <th className="text-left px-3 py-2.5">Type</th>
-                <th className="text-left px-3 py-2.5">CX Maturity</th>
+                <th className="text-left px-3 py-2.5">Product</th>
+                <th className="text-left px-3 py-2.5">Maturity</th>
                 <th className="text-right px-3 py-2.5">Score</th>
               </tr>
             </thead>
@@ -148,8 +184,13 @@ export function RecentCalls({
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
-                    <span className={`px-2 py-0.5 text-[10px] font-semibold rounded uppercase tracking-wide ${maturityClasses(c.cx_maturity)}`}>
-                      {maturityShortLabel(c.cx_maturity)}
+                    <span className={`px-2 py-0.5 text-[10px] font-semibold rounded uppercase tracking-wide ${productClasses(c.product)}`}>
+                      {productShortLabel(c.product)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span className={`px-2 py-0.5 text-[10px] font-semibold rounded uppercase tracking-wide ${maturityClasses(c.maturity || c.cx_maturity)}`}>
+                      {maturityShortLabel(c.maturity || c.cx_maturity, c.maturity_scope)}
                     </span>
                   </td>
                   <td className={`px-3 py-2.5 text-right font-semibold ${scoreColor(c.score)}`}>
