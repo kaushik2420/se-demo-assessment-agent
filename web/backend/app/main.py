@@ -25,7 +25,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_db
-from app.routers import auth, calls, dashboard, events, team, upload
+from app.routers import auth, calls, dashboard, events, slack, team, tracker, upload
 
 app = FastAPI(
     title="SurveySparrow SE Coach API",
@@ -54,6 +54,20 @@ def _startup():
     else:
         print("[scheduler] GRANOLA_API_KEY not set — auto-sync disabled")
 
+    # Slack tracker staleness reminder — runs daily at 09:00 UTC
+    if os.getenv("SLACK_BOT_TOKEN"):
+        try:
+            from apscheduler.schedulers.background import BackgroundScheduler as _BS
+            from apscheduler.triggers.cron import CronTrigger
+            from app.services.slack_tracker import check_staleness_and_remind
+            s2 = _BS(timezone="UTC")
+            s2.add_job(check_staleness_and_remind, CronTrigger(hour=9, minute=0),
+                       id="tracker_staleness", max_instances=1, coalesce=True)
+            s2.start()
+            print("[scheduler] Tracker staleness reminders daily at 09:00 UTC — enabled")
+        except Exception as e:
+            print(f"[scheduler] failed to start staleness reminders: {e}")
+
 
 _origins = [o.strip() for o in os.getenv(
     "CORS_ORIGINS",
@@ -79,6 +93,8 @@ app.include_router(upload.router, prefix="/calls", tags=["upload"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(events.router, prefix="/events", tags=["events"])
 app.include_router(team.router, prefix="/team", tags=["team"])
+app.include_router(tracker.router, prefix="/tracker", tags=["tracker"])
+app.include_router(slack.router, prefix="/slack", tags=["slack"])
 
 
 @app.get("/", tags=["health"])

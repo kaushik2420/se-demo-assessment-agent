@@ -82,6 +82,33 @@ class Insights(Base):
     call: Mapped[Call] = relationship(back_populates="insights")
 
 
+class TrackerRequest(Base):
+    """A request tracked via the @SE Coach Slack tag."""
+    __tablename__ = "tracker_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    thread_ts: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    channel_id: Mapped[str] = mapped_column(String(64), index=True)
+    channel_name: Mapped[Optional[str]] = mapped_column(String(255))
+    slack_url: Mapped[Optional[str]] = mapped_column(String(512))
+
+    requested_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    eta: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+    se_email: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    se_name: Mapped[Optional[str]] = mapped_column(String(255))
+    engineer_name: Mapped[Optional[str]] = mapped_column(String(255))
+
+    details: Mapped[Optional[str]] = mapped_column(Text)
+    comments: Mapped[Optional[str]] = mapped_column(Text)  # timestamped accumulator
+
+    status: Mapped[str] = mapped_column(String(16), default="open", index=True)  # open | closed
+
+    last_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    reminder_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class CoachingAction(Base):
     __tablename__ = "coaching_actions"
 
