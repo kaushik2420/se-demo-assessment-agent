@@ -173,7 +173,22 @@ def build_property(prop_type: str, value: Any, *, options: List[str] = None) -> 
     if prop_type == "date":
         if isinstance(value, (date, datetime)):
             return {"date": {"start": value.isoformat()[:10]}}
-        return {"date": {"start": str(value)[:10]}}
+        # String input — try ISO first (YYYY-MM-DD), then dateutil fallback.
+        # If neither works, skip rather than send invalid data to Notion.
+        s = str(value).strip()
+        # Quick ISO test (10 chars YYYY-MM-DD or longer with T...)
+        try:
+            from datetime import date as _date
+            _date.fromisoformat(s[:10])
+            return {"date": {"start": s[:10]}}
+        except ValueError:
+            pass
+        try:
+            from dateutil import parser as _du_parser
+            parsed = _du_parser.parse(s, fuzzy=True)
+            return {"date": {"start": parsed.date().isoformat()}}
+        except Exception:
+            return None  # un-parseable string → leave the field blank
     if prop_type == "checkbox":
         return {"checkbox": bool(value)}
     if prop_type in ("select", "status"):

@@ -117,11 +117,13 @@ def _build_properties(call: dict, insights: dict, schema: dict) -> dict:
                 set_field("Present Survey Provider", name)
                 break
 
-    # Timeline (from prospect_engagement buying signals — try to find a date hint)
+    # Timeline (from prospect_engagement buying signals — try to find a real
+    # date. Only push if we can parse it; otherwise leave the field blank
+    # rather than fail the whole row.)
     pe = insights.get("prospect_engagement") or {}
-    timeline_hint = _extract_timeline_hint(pe.get("buying_signals", []))
-    if timeline_hint:
-        set_field("Timeline", timeline_hint)
+    timeline_date = _extract_timeline_date(pe.get("buying_signals", []))
+    if timeline_date:
+        set_field("Timeline", timeline_date)
 
     # Product (default to SurveySparrow unless use_case mentions ThriveSparrow / SparrowDesk)
     use_case = (insights.get("use_case") or {}).get("summary", "")
@@ -138,19 +140,66 @@ def _first_name(full_name: Optional[str]) -> Optional[str]:
     return full_name.strip().split()[0]
 
 
-def _extract_timeline_hint(signals: list) -> Optional[str]:
-    """Look for date/timeline mentions in buying signals."""
+def _extract_timeline_date(signals: list):
+    """
+    Find a buying signal that contains a date mention AND can actually be
+    parsed into a real calendar date. Returns a `date` object or None.
+
+    We use dateutil's fuzzy parser, which handles:
+      - "by March 31, 2026"
+      - "end of June"  → assumes current year
+      - "Q3 2026"      → handled separately (dateutil doesn't parse 'Q3')
+      - "next quarter" → can't parse → returns None (which is correct)
+    """
     if not signals:
         return None
     import re
-    # Match patterns like "by Q3", "end of June", "March 31", "next quarter"
+    from datetime import date as _date, datetime as _dt
+
+    # Quarter mentions: "Q1 2026" → first day of that quarter
+    quarter_re = re.compile(r"\bQ([1-4])\s*(\d{4})\b", re.IGNORECASE)
+    # Month mentions: at least a month name should be present for the signal to be a candidate
     month_re = re.compile(
-        r"\b(January|February|March|April|May|June|July|August|September|October|November|December|Q[1-4])\b",
+        r"\b(January|February|March|April|May|June|July|August|September|October|November|December)\b",
         re.IGNORECASE
     )
+
+    try:
+        from dateutil import parser as _du_parser
+        default = _dt(_dt.now().year, 1, 1)
+    except ImportError:
+        _du_parser = None
+        default = None
+
     for s in signals:
-        if isinstance(s, str) and month_re.search(s):
-            return s[:200]
+        if not isinstance(s, str) or not s.strip():
+            continue
+
+        # Try quarter syntax first
+        qm = quarter_re.search(s)
+        if qm:
+            q = int(qm.group(1))
+            yr = int(qm.group(2))
+            return _date(yr, (q - 1) * 3 + 1, 1)
+
+        # Skip signals that don't even mention a month — avoids false positives
+        if not month_re.search(s):
+            continue
+
+        if _du_parser is None:
+            continue
+
+        # Try fuzzy parse — but only accept the result if it didn't fall back
+        # to ALL of the default values (which would mean nothing was parsed)
+        try:
+            parsed = _du_parser.parse(s, fuzzy=True, default=default)
+            # Sanity-check: must be within ±2 years of today (to filter out
+            # parses like "Team agree" → some bizarre year)
+            today = _dt.now()
+            if abs((parsed.year - today.year)) <= 2:
+                return parsed.date()
+        except (ValueError, OverflowError, TypeError):
+            continue
     return None
 
 
