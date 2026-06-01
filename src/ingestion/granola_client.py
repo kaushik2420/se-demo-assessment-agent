@@ -121,45 +121,55 @@ class GranolaClient:
 
     def list_notes_since(
         self,
-        created_after: Union[str, datetime],
+        created_after: Union[str, datetime, None] = None,
+        updated_after: Union[str, datetime, None] = None,
         page_size: int = 30,
         max_pages: int = 20,
     ) -> List[GranolaNote]:
         """
-        List all notes created since `created_after`. Accepts a datetime
-        (preferred) or a pre-formatted string. Datetimes are normalized to
-        ISO 8601 in UTC with 'Z' suffix and no microseconds, which is what
-        Granola's API accepts.
+        List notes. Pass EITHER created_after (notes created since) OR
+        updated_after (notes with any modification — including folder
+        membership changes — since). For our sync we use updated_after so
+        retroactively-shared notes get caught.
+
+        Accepts a datetime (preferred) or pre-formatted ISO string.
+        Datetimes are normalized to ISO 8601 in UTC with 'Z' suffix and no
+        microseconds (Granola rejects microseconds).
 
         Walks the cursor pagination until no more pages or max_pages hit.
         """
-        # Normalize to Granola's accepted format
-        if isinstance(created_after, datetime):
-            dt = created_after
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            date_str = dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        else:
-            # String — strip any microseconds + convert +00:00 to Z
-            s = str(created_after)
-            if "." in s:  # has microseconds: 2026-05-24T16:00:06.545874+00:00
-                # Split at '.' and keep everything before, then add timezone back
+        if created_after is None and updated_after is None:
+            raise ValueError("must pass either created_after or updated_after")
+
+        def _normalize(value) -> str:
+            if isinstance(value, datetime):
+                dt = value
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            s = str(value)
+            if "." in s:
                 pre, _, rest = s.partition(".")
-                # rest looks like "545874+00:00" — find the timezone offset
                 for sep in ("+", "-", "Z"):
                     idx = rest.find(sep)
                     if idx > 0:
                         s = pre + rest[idx:]
                         break
                 else:
-                    s = pre  # fallback: no tz found
-            date_str = s.replace("+00:00", "Z")
+                    s = pre
+            return s.replace("+00:00", "Z")
+
+        date_param = {}
+        if updated_after is not None:
+            date_param["updated_after"] = _normalize(updated_after)
+        if created_after is not None:
+            date_param["created_after"] = _normalize(created_after)
 
         out: List[GranolaNote] = []
         cursor = None
         for _ in range(max_pages):
             params = {
-                "created_after": date_str,
+                **date_param,
                 "page_size": min(max(page_size, 1), 30),
             }
             if cursor:

@@ -113,13 +113,27 @@ def _read_result() -> Optional[dict]:
         return None
 
 
+# Always look back at least this far on every sync, regardless of last_sync_at.
+# Why: Granola's `updated_after` filter catches retroactively-shared notes only
+# within its window. A 30-day overlap window means even if a team member
+# back-shares a 3-week-old note, we still pick it up. Dedupe via external_id
+# prevents reprocessing, so the cost is just extra API list calls (cheap).
+LOOKBACK_DAYS = 30
+
+
 def _read_last_sync() -> datetime:
+    """Used only for the UI 'last sync N min ago' display. NOT used for filtering."""
     if _STATE_FILE.exists():
         try:
             return datetime.fromisoformat(_STATE_FILE.read_text().strip())
         except Exception:
             pass
-    return datetime.now(timezone.utc) - timedelta(days=14)
+    return datetime.now(timezone.utc) - timedelta(days=LOOKBACK_DAYS)
+
+
+def _query_window() -> datetime:
+    """The actual datetime we send to Granola — always a constant 30-day lookback."""
+    return datetime.now(timezone.utc) - timedelta(days=LOOKBACK_DAYS)
 
 
 def _write_last_sync(when: datetime):
@@ -192,10 +206,14 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
     """
     _set_in_progress(True)
     started_at = datetime.now(timezone.utc)
-    since = force_since or _read_last_sync()
+    # IMPORTANT: we use a constant 30-day lookback (not last_sync_at) so that
+    # retroactively-shared notes get caught. Dedupe via external_id prevents
+    # double-processing notes we've seen before.
+    since = force_since or _query_window()
     stats = {
         "started_at": started_at.isoformat(),
         "since": since.isoformat(),
+        "lookback_days": LOOKBACK_DAYS,
         "notes_seen": 0,
         "imported": 0,
         "skipped_folder_filter": 0,
@@ -214,9 +232,10 @@ def run_sync(force_since: Optional[datetime] = None, dry_run: bool = False) -> d
 
     try:
         client = GranolaClient()
-        # Pass datetime directly — the client formats to Granola's required
-        # ISO 8601 + Z (no microseconds) format internally
-        notes = client.list_notes_since(since)
+        # Use updated_after (not created_after) so we catch notes that were
+        # CREATED earlier but SHARED-TO-FOLDER recently. This is the fix for
+        # retroactive shares that previously got missed by incremental sync.
+        notes = client.list_notes_since(updated_after=since)
     except Exception as e:
         stats["errors"].append(f"list_notes_since failed: {e}")
         _write_result(stats); _set_in_progress(False)
