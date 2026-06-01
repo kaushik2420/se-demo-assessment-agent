@@ -6,7 +6,7 @@ import { TopNav } from "@/components/TopNav";
 import { InfoIcon } from "@/components/MethodologyDrawer";
 import { RecentCalls } from "@/components/RecentCalls";
 
-const fetcher = (url: string) => api(url);
+const fetcher = (url: string): Promise<any> => api(url);
 
 const MEDAL = ["🥇", "🥈"];
 
