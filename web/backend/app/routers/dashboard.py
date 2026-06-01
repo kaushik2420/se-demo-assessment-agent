@@ -83,7 +83,15 @@ def se_dashboard(user: CurrentUser = Depends(get_current_user), db: Session = De
 @router.get("/manager", dependencies=[Depends(require_role("manager", "admin"))])
 def manager_dashboard(db: Session = Depends(get_db)):
     dotm = compute_dotm(db)
-    ses = db.query(User).filter(User.role == "se").all()
+    # Anyone who has actually run calls belongs on the leaderboard, regardless
+    # of role. Managers and admins frequently run their own demos and should
+    # be benchmarked alongside individual contributors. We pull all users who
+    # have at least one scored call linked to their se_id (avoids hard-coding
+    # which roles "do calls" — works for ceo/observer/future roles too).
+    user_ids_with_calls = {
+        row[0] for row in db.query(Call.se_id).filter(Call.scorecard.has(), Call.se_id.isnot(None)).distinct().all()
+    }
+    ses = db.query(User).filter(User.id.in_(user_ids_with_calls)).all() if user_ids_with_calls else []
     leaderboard = []
     for se in ses:
         calls = [c for c in se.calls if c.scorecard]
