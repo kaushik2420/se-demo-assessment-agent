@@ -23,6 +23,8 @@ type Section =
   | "per-criterion"
   | "sources"
   | "call-types"
+  | "audio-only"
+  | "deal-intel"
   | "scorecard"
   | "faq"
   | "managers";
@@ -162,6 +164,8 @@ const TOC: { label: string; anchor: Section }[] = [
   { label: "Per-criterion", anchor: "per-criterion" },
   { label: "Sources", anchor: "sources" },
   { label: "Call types", anchor: "call-types" },
+  { label: "Audio-only scoring", anchor: "audio-only" },
+  { label: "Deal intelligence", anchor: "deal-intel" },
   { label: "Scorecard", anchor: "scorecard" },
   { label: "FAQ", anchor: "faq" },
   { label: "For managers", anchor: "managers" },
@@ -181,9 +185,17 @@ function Content() {
           We then compare your final score to a baseline of typical B2B SaaS Solution Engineers and tell you which
           percentile bucket you fall into. <strong>P50 = median. P75 = top quarter. P10 = bottom decile.</strong>
         </p>
+        <p>
+          Beyond the score, we extract <strong>deal-intelligence signals</strong> from each call — what product the
+          conversation is about (SurveySparrow / ThriveSparrow / SparrowDesk), the prospect's program maturity
+          (CX or EX scope), features they discussed vs features they explicitly requested as gaps, competitors,
+          trial issues, AE behavior, and selling style.
+        </p>
         <div className="callout">
           The rubric is the same scoring system kaushik used historically in his "Demo of the Month" Excel sheets —
-          we just automated it and benchmarked it against industry data.
+          we just automated it and benchmarked it against industry data. Visual-only signals (was your logo on screen?
+          did you use prospect data?) are only scored when the transcript verbally describes them — see
+          "Audio-only scoring" below.
         </div>
       </section>
 
@@ -221,6 +233,13 @@ function Content() {
           <li>Audience Engagement: 4.0 → contributes 0.05 × 4.0 = 0.200</li>
         </ul>
         <p><strong>Final = 3.79 / 5.</strong> That's the big number on your dashboard.</p>
+        <div className="callout">
+          <strong>Weight rescaling for unassessable sub-criteria.</strong> If an entire criterion ends up unscorable
+          (e.g. all of Craftsmanship was visual-only on a call with no screen description), it drops out and the
+          remaining weights are <strong>rescaled to sum to 100</strong>. So your final score isn't artificially
+          deflated by the missing criterion — you're scored on what was actually assessable from the transcript.
+          See "Audio-only scoring" for the full rule.
+        </div>
       </section>
 
       <section data-section="percentile">
@@ -316,14 +335,81 @@ function Content() {
         </p>
       </section>
 
+      <section data-section="audio-only">
+        <h3>7. Audio-only scoring — how we handle visual signals</h3>
+        <p>
+          The analysis only ever sees a <strong>written transcript of the audio</strong>. We never have video,
+          screenshots, or the actual demo screen. That matters because several sub-criteria in the rubric are about
+          things on screen:
+        </p>
+        <ul>
+          <li><strong>Craftsmanship → Personalization</strong> (was the prospect's logo on screen? vertical-relevant data?)</li>
+          <li><strong>Craftsmanship → Customization</strong> (custom dashboards, role-played personas, working integrations?)</li>
+          <li><strong>Presentation → Relevance</strong> (does each shown artifact tie to a stated need?)</li>
+          <li><strong>Presentation → Cohesion</strong> (visual narrative arc)</li>
+        </ul>
+        <p>For these visual sub-criteria, Claude follows a strict rule:</p>
+        <ol>
+          <li>Search the transcript for verbal evidence of what was on screen. <em>"Let me pull up your dashboard with your company logo"</em> counts. <em>"As you can see, this is your industry's data"</em> counts. A prospect reacting to visuals (<em>"nice, that's our brand color"</em>) counts.</li>
+          <li>If found → score normally, with the verbal evidence as the quote.</li>
+          <li>If <strong>none found</strong> → mark the sub-criterion <code>not_assessable</code>, score = null. The sub is <strong>excluded</strong> from the criterion average rather than getting a penalty score.</li>
+        </ol>
+        <p>
+          On the call detail page you'll see a grey banner at the top listing which sub-criteria were excluded for
+          this reason. If most of Craftsmanship was not_assessable, that's expected for an audio-only call where you
+          didn't verbally describe what was on screen.
+        </p>
+        <div className="callout">
+          <strong>The takeaway for SEs:</strong> if you want credit for a beautifully personalized demo environment,
+          <em>say it out loud during the call</em> — "let me pull up the dashboard we mocked with your logo and
+          last quarter's NPS data." That gives the analysis verbal evidence to score against. Without it, the demo
+          craft doesn't reach the transcript, and we won't make claims about it either way.
+        </div>
+      </section>
+
+      <section data-section="deal-intel">
+        <h3>8. Deal-intelligence signals — what we extract beyond the score</h3>
+        <p>
+          Each call also gets a structured extract of <strong>deal-context</strong> signals — visible on the call
+          detail page and rolled up into the manager + CEO dashboards. The score is the SE's coaching loop; the
+          intelligence is the company's deal-loop.
+        </p>
+        <table>
+          <thead><tr><th>Signal</th><th>What it captures</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Product</strong></td><td>Which product the conversation is primarily about: SurveySparrow (CX/feedback), ThriveSparrow (EX/employee engagement), or SparrowDesk (helpdesk/support).</td></tr>
+            <tr><td><strong>Use case</strong></td><td>1-2 sentence description of what the prospect actually wants to do, with direct quotes.</td></tr>
+            <tr><td><strong>Maturity</strong></td><td>An 8-dimension 0-3 scorecard rolling into a band: Form / Basic · Low Maturity · Potential High · High. The <strong>scope</strong> (CX or EX) is set by the product. ThriveSparrow conversations get EX maturity; the others get CX.</td></tr>
+            <tr><td><strong>Features discussed</strong></td><td>Capabilities already in our product that came up — demoed, mentioned, or that the prospect asked about and we have. <strong>Most product-feature talk goes here.</strong></td></tr>
+            <tr><td><strong>Feature requests / gaps</strong></td><td>Things we <em>don't</em> have that the prospect asked for, or that our team admitted is missing/roadmap. Tagged blocker / nice-to-have / mentioned. <strong>Only true gaps end up here</strong>, not existing capabilities.</td></tr>
+            <tr><td><strong>Competitors</strong></td><td>Other vendors named, with context: evaluated, currently using, dismissed.</td></tr>
+            <tr><td><strong>Trial issues</strong></td><td>Things that broke or were confusing during a trial, with severity.</td></tr>
+            <tr><td><strong>Loss-risk signals</strong></td><td>No-reference-customer asks, support quality concerns, pricing pushback, product-gap concerns.</td></tr>
+            <tr><td><strong>AE behavior</strong></td><td>How many times the AE interrupted the SE mid-value, plus an impact verdict.</td></tr>
+            <tr><td><strong>SE selling style</strong></td><td>Feature-selling vs value-selling split — same audio, just measuring framing.</td></tr>
+            <tr><td><strong>Prospect engagement</strong></td><td>Overall sentiment, buying signals, objections.</td></tr>
+          </tbody>
+        </table>
+        <div className="callout">
+          <strong>Features discussed vs feature requests — the bright line:</strong> if you demoed it or it already
+          exists in the platform, it's <em>discussed</em>. If the prospect explicitly said they need something we
+          don't have, or your team said "that's not available today" — it's a <em>request</em>. The split exists
+          because product/engineering doesn't want to wade through 50 "feature requests" that are actually existing
+          capabilities the prospect just hadn't seen yet.
+        </div>
+      </section>
+
       <section data-section="scorecard">
-        <h3>7. What's in your scorecard</h3>
-        <p>Every scorecard has 4 things:</p>
+        <h3>9. What's in your scorecard</h3>
+        <p>Every scorecard has the following:</p>
         <ul>
           <li><strong>Final weighted score + industry percentile</strong> — the headline. Use it for trend, not for ego.</li>
           <li><strong>Per-criterion scores + industry-gap deltas</strong> — the diagnostic. Biggest negative gap = highest-leverage area.</li>
           <li><strong>Top 3 strengths + top 3 gaps</strong> — qualitative, evidence-based. Each tied to a transcript moment.</li>
           <li><strong>One coaching action for the month</strong> — single concrete behavior change. <strong>This is the only thing you have to do.</strong></li>
+          <li><strong>Not-assessable banner</strong> (when relevant) — lists which sub-criteria couldn't be scored from this transcript and were excluded from the weighted average.</li>
+          <li><strong>Product + Maturity badges</strong> — at-a-glance: which product (SurveySparrow/ThriveSparrow/SparrowDesk) and what scope of maturity (CX or EX).</li>
+          <li><strong>Deal-intelligence grid</strong> — product, use case, maturity, features discussed, feature requests/gaps, competitors, trial issues, SE selling style, AE behavior, prospect engagement.</li>
         </ul>
         <div className="callout">
           One behavior change, sustained, moves you up a percentile band over a quarter.
@@ -332,7 +418,33 @@ function Content() {
       </section>
 
       <section data-section="faq">
-        <h3>8. FAQ</h3>
+        <h3>10. FAQ</h3>
+        <p><strong>Why is "Craftsmanship" missing or partial on my call?</strong><br/>
+          Most of Craftsmanship is about what's on screen (your logo on the dashboard, custom data, working
+          integrations). The analysis only sees the audio transcript — so those sub-criteria are only scored when
+          you (or the prospect) verbally referenced them on the call. The grey banner at the top of your call
+          detail page lists which sub-criteria couldn't be scored. Those are <em>excluded</em> from the weighted
+          average — they don't drag your score down. Solution: narrate your craft out loud during demos.
+        </p>
+        <p><strong>I demoed feature X — why is it in "Features discussed" instead of "Feature requests"?</strong><br/>
+          Because the prospect didn't say it's missing. <em>Feature requests / gaps</em> only contains things we
+          don't have or the team admitted is unavailable. Anything you demoed or that the prospect explored and we
+          support belongs in <em>features discussed</em>. This split exists because product/engineering needs a
+          clean list of true gaps — not 50 "requests" that are actually existing capabilities.
+        </p>
+        <p><strong>Why does the call say "ThriveSparrow" / "SparrowDesk" / "Unknown" as the product?</strong><br/>
+          The product field is inferred from what the conversation is about. NPS / customer feedback / journeys →
+          SurveySparrow. eNPS / engagement / 360 reviews → ThriveSparrow. Ticketing / helpdesk → SparrowDesk.
+          Multi-product conversations get the primary one in the badge with the others in the call detail. If it
+          looks wrong, the transcript probably didn't have strong enough signal — paste a clearer transcript via
+          Upload or check the AE's qualifying notes.
+        </p>
+        <p><strong>What's the "Maturity (CX/EX)" badge?</strong><br/>
+          The 8-dimension maturity framework still works the same, but the scope (CX vs EX) is now stated explicitly
+          because ThriveSparrow conversations are about employee experience, not customer experience. SurveySparrow
+          and SparrowDesk conversations are scoped as CX; ThriveSparrow conversations are scoped as EX. The bands
+          are the same.
+        </p>
         <p><strong>Why do Granola-sourced calls have a yellow "AE behavior is inferred" banner?</strong><br/>
           Granola records the SE's microphone separately but mixes the AE and prospect into a
           single "other" audio track. So when we label speaker turns, we know which lines are
@@ -354,10 +466,15 @@ function Content() {
         <p><strong>Will my AE see my scores?</strong><br/>
           No. SEs see only their own scores. Managers see the team. CEO sees aggregates. AEs do not have portal access.
         </p>
+        <p><strong>My old calls were scored under the older prompt — will they get updated?</strong><br/>
+          Admins can trigger a "Re-analyze under current prompts" run from the Team page. It re-scores every call
+          on an older prompt version using the latest rubric, the visual-evidence rule, and the features split.
+          Score quotes and dates are preserved; only the scores + insights are refreshed.
+        </p>
       </section>
 
       <section data-section="managers">
-        <h3>9. For managers — how to use this</h3>
+        <h3>11. For managers — how to use this</h3>
         <ul>
           <li><strong>Don't lead with percentile in 1:1s.</strong> Lead with the single coaching action.</li>
           <li><strong>Watch the trend, not the snapshot.</strong> A great SE having a bad month is a coaching conversation. Three months of decline is a process intervention.</li>
