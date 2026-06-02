@@ -54,19 +54,27 @@ def _startup():
     else:
         print("[scheduler] GRANOLA_API_KEY not set — auto-sync disabled")
 
-    # Slack tracker staleness reminder — runs daily at 09:00 UTC
+    # Slack tracker — two daily jobs:
+    #   - 03:00 UTC: refresh every open thread (re-pull comments, backfill URLs)
+    #   - 09:00 UTC: staleness reminders for rows untouched >15 days
     if os.getenv("SLACK_BOT_TOKEN"):
         try:
             from apscheduler.schedulers.background import BackgroundScheduler as _BS
             from apscheduler.triggers.cron import CronTrigger
-            from app.services.slack_tracker import check_staleness_and_remind
+            from app.services.slack_tracker import (
+                check_staleness_and_remind, refresh_open_threads,
+            )
             s2 = _BS(timezone="UTC")
+            s2.add_job(refresh_open_threads, CronTrigger(hour=3, minute=0),
+                       id="tracker_refresh", max_instances=1, coalesce=True,
+                       misfire_grace_time=3600)
             s2.add_job(check_staleness_and_remind, CronTrigger(hour=9, minute=0),
                        id="tracker_staleness", max_instances=1, coalesce=True)
             s2.start()
+            print("[scheduler] Tracker thread refresh daily at 03:00 UTC — enabled")
             print("[scheduler] Tracker staleness reminders daily at 09:00 UTC — enabled")
         except Exception as e:
-            print(f"[scheduler] failed to start staleness reminders: {e}")
+            print(f"[scheduler] failed to start tracker crons: {e}")
 
 
 _origins = [o.strip() for o in os.getenv(

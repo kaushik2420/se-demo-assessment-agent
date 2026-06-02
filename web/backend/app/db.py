@@ -56,6 +56,23 @@ def init_db():
             conn.execute(text(
                 "ALTER TABLE scorecards ADD COLUMN IF NOT EXISTS not_assessable JSON"
             ))
+            # Tracker v2 (Jun 2026) — product/kind categorization + L2/Jira URL columns
+            # + last_synced_at for the daily thread refresh cron.
+            conn.execute(text(
+                "ALTER TABLE tracker_requests ADD COLUMN IF NOT EXISTS product VARCHAR(32)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE tracker_requests ADD COLUMN IF NOT EXISTS kind VARCHAR(16)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE tracker_requests ADD COLUMN IF NOT EXISTS l2_url VARCHAR(1024)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE tracker_requests ADD COLUMN IF NOT EXISTS jira_url VARCHAR(1024)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE tracker_requests ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP WITH TIME ZONE"
+            ))
             conn.commit()
         except Exception as e:
             print(f"[init_db] non-fatal: {e}")

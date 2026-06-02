@@ -105,9 +105,16 @@ class TrackerRequest(Base):
     details: Mapped[Optional[str]] = mapped_column(Text)
     comments: Mapped[Optional[str]] = mapped_column(Text)  # timestamped accumulator
 
+    # v2 fields — categorization extracted from the thread context
+    product: Mapped[Optional[str]] = mapped_column(String(32))   # SurveySparrow | ThriveSparrow | SparrowDesk | Unknown
+    kind: Mapped[Optional[str]] = mapped_column(String(16))      # issue | request
+    l2_url: Mapped[Optional[str]] = mapped_column(String(1024))  # L2/Zendesk ticket link
+    jira_url: Mapped[Optional[str]] = mapped_column(String(1024))
+
     status: Mapped[str] = mapped_column(String(16), default="open", index=True)  # open | closed
 
     last_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    last_synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))  # daily-cron checkpoint
     reminder_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
