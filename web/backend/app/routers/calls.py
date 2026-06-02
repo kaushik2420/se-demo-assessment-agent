@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.deps import CurrentUser, get_current_user
+from app.deps import CurrentUser, get_current_user, require_role
 from app.models import Call, Scorecard, Insights, User
 
 
@@ -73,6 +73,24 @@ def list_calls(
             duration_min=c.duration_min,
         ))
     return out
+
+
+@router.delete("/{call_id}", status_code=204,
+               dependencies=[Depends(require_role("admin", "manager"))])
+def delete_call(
+    call_id: str,
+    db: Session = Depends(get_db),
+):
+    """Hard-delete a call and its scorecard + insights. Manager/admin only.
+    Used to clean up test data. Scorecard + Insights cascade via the
+    relationship config on Call."""
+    c = db.query(Call).filter(Call.call_id == call_id).first()
+    if not c:
+        raise HTTPException(404, "Call not found")
+    db.delete(c)
+    db.commit()
+    print(f"[calls] DELETED call_id={call_id} prospect={c.prospect_company!r} se={c.se_name!r}")
+    return None
 
 
 @router.get("/{call_id}", response_model=CallDetail)

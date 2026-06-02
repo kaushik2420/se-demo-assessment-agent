@@ -202,6 +202,7 @@ export default function TrackerPage() {
           canEdit={canEdit}
           onClose={() => setSelected(null)}
           onSaved={(updated) => { setSelected(updated); mutate(); }}
+          onDeleted={() => { setSelected(null); mutate(); }}
         />
       )}
     </>
@@ -209,14 +210,29 @@ export default function TrackerPage() {
 }
 
 function DetailDrawer({
-  item, canEdit, onClose, onSaved,
+  item, canEdit, onClose, onSaved, onDeleted,
 }: {
   item: Item;
   canEdit: boolean;
   onClose: () => void;
   onSaved: (updated: Item) => void;
+  onDeleted: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!confirm(`Delete tracker item #${item.id} (${(item.details || "no details").slice(0, 80)})? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await api(`/tracker/${item.id}`, { method: "DELETE" });
+      onDeleted();
+    } catch (e: any) {
+      alert(`Delete failed: ${e?.message || e}`);
+      setDeleting(false);
+    }
+  }
+
   return (
     <>
       <div onClick={onClose}
@@ -233,10 +249,16 @@ function DetailDrawer({
           </div>
           <div className="flex gap-2 items-center">
             {canEdit && !editing && (
-              <button onClick={() => setEditing(true)}
-                className="px-3 py-1.5 bg-ss-cream border border-ss-cyan-soft text-ss-navy rounded font-semibold text-xs hover:bg-ss-cyan-soft transition">
-                ✎ Edit
-              </button>
+              <>
+                <button onClick={() => setEditing(true)}
+                  className="px-3 py-1.5 bg-ss-cream border border-ss-cyan-soft text-ss-navy rounded font-semibold text-xs hover:bg-ss-cyan-soft transition">
+                  ✎ Edit
+                </button>
+                <button onClick={handleDelete} disabled={deleting}
+                  className="px-3 py-1.5 text-xs font-semibold text-red-700 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 rounded transition disabled:opacity-50">
+                  {deleting ? "Deleting…" : "🗑 Delete"}
+                </button>
+              </>
             )}
             <button onClick={onClose}
               className="text-ss-navy-soft hover:text-ss-navy text-xl leading-none">✕</button>

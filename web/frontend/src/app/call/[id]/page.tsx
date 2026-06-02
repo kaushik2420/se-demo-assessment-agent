@@ -1,5 +1,6 @@
 "use client";
-import { use } from "react";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -10,7 +11,24 @@ const fetcher = (url: string) => api(url);
 
 export default function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const { data, error, isLoading } = useSWR<any>(`/calls/${id}`, fetcher);
+  const { data: me } = useSWR<any>("/auth/me", fetcher);
+  const [deleting, setDeleting] = useState(false);
+  const canDelete = me?.role === "admin" || me?.role === "manager";
+
+  async function handleDelete() {
+    const label = data?.call?.prospect_company || id;
+    if (!confirm(`Delete this call (${label}) along with its scorecard and insights? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await api(`/calls/${id}`, { method: "DELETE" });
+      router.push(me?.role === "se" ? "/dashboard" : "/manager");
+    } catch (e: any) {
+      alert(`Delete failed: ${e?.message || e}`);
+      setDeleting(false);
+    }
+  }
 
   if (isLoading) return (<><TopNav /><div className="p-10 text-ss-navy-soft">Loading…</div></>);
   if (error) return (<><TopNav /><div className="p-10 text-red-600">Failed: {String(error)}</div></>);
@@ -36,7 +54,15 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
     <>
       <TopNav />
       <main className="max-w-7xl mx-auto p-10">
-        <Link href="/dashboard" className="text-sm text-ss-navy-soft hover:text-ss-navy">← Back to dashboard</Link>
+        <div className="flex justify-between items-center">
+          <Link href="/dashboard" className="text-sm text-ss-navy-soft hover:text-ss-navy">← Back to dashboard</Link>
+          {canDelete && (
+            <button onClick={handleDelete} disabled={deleting}
+              className="px-3 py-1.5 text-xs font-semibold text-red-700 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 rounded transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {deleting ? "Deleting…" : "🗑 Delete call"}
+            </button>
+          )}
+        </div>
         <div className="flex justify-between items-end mt-2 mb-6">
           <div>
             <h1 className="text-2xl font-semibold text-ss-navy">{call.prospect_company}</h1>

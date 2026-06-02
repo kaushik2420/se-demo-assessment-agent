@@ -266,6 +266,22 @@ def _parse_iso_date(s: Optional[str]) -> Optional[datetime]:
         return None
 
 
+@router.delete("/{item_id}", status_code=204,
+               dependencies=[Depends(require_role("admin", "manager"))])
+def delete_tracker_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+):
+    """Hard-delete a tracker row. Manager/admin only. Used to clean up test data."""
+    row = db.query(TrackerRequest).filter(TrackerRequest.id == item_id).first()
+    if not row:
+        raise HTTPException(404, "Not found")
+    db.delete(row)
+    db.commit()
+    print(f"[tracker] DELETED row #{item_id} details={(row.details or '')[:60]!r}")
+    return None
+
+
 @router.patch("/{item_id}", response_model=TrackerItem,
               dependencies=[Depends(require_role("admin", "manager"))])
 def update_tracker_item(
