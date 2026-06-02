@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { TopNav } from "@/components/TopNav";
+import { TrackerReextractCard } from "@/components/TrackerReextractCard";
 
 type Item = {
   id: number;
@@ -113,6 +114,8 @@ export default function TrackerPage() {
             ⤓ Export CSV
           </button>
         </div>
+
+        {me?.role === "admin" && <TrackerReextractCard />}
 
         <div className="flex gap-3 mb-4 items-center text-sm">
           <span className="text-ss-navy-soft">Filter:</span>

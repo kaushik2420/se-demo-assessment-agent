@@ -13,7 +13,7 @@ import io
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -181,6 +181,45 @@ def update_tracker_item(
     db.commit()
     db.refresh(row)
     return _to_item(row)
+
+
+# -------------------------------------------------------------------------
+# Re-extract existing rows under the v2 prompt (admin)
+# -------------------------------------------------------------------------
+
+@router.get("/reextract/status",
+            dependencies=[Depends(require_role("admin"))])
+def reextract_status():
+    from app.services.tracker_reextract import get_status
+    return get_status()
+
+
+@router.post("/reextract",
+             dependencies=[Depends(require_role("admin"))])
+def reextract_now(
+    bg: BackgroundTasks,
+    mode: str = Query("outdated", pattern="^(outdated|all)$"),
+    limit: Optional[int] = Query(None, description="Cap number of rows processed"),
+):
+    """Re-fetch the Slack thread for matching rows and run the v2 extraction.
+    Backfill-only — preserves any manual edits. Admin only.
+    Poll /tracker/reextract/status for progress and results."""
+    from app.services.tracker_reextract import is_in_progress, run_reextract
+    if is_in_progress():
+        return {"status": "already_running",
+                "message": "A re-extract is already running. Poll status for results."}
+
+    def _runner():
+        try:
+            run_reextract(mode=mode, limit=limit)
+        except Exception as e:
+            import traceback
+            print(f"[tracker.reextract] CRASHED: {e}")
+            traceback.print_exc()
+
+    bg.add_task(_runner)
+    return {"status": "started", "mode": mode, "limit": limit,
+            "message": "Re-extract started in background. Refresh status to see progress."}
 
 
 @router.get("/export.csv")
