@@ -117,8 +117,11 @@ def run_reextract(mode: str = "outdated", limit: Optional[int] = None) -> dict:
         "skipped_thread_gone": 0,
         "fields_backfilled": {  # rough audit log of what we actually changed
             "product": 0, "kind": 0, "l2_url": 0, "jira_url": 0,
-            "se_email": 0, "details": 0,
+            "se_email_filled": 0,        # was empty, now filled
+            "se_email_reassigned": 0,    # had a value (the tagger), now corrected to first-poster
+            "details": 0,
         },
+        "se_reassignments": [],  # list of {row_id, from, to} so admin can audit
         "failed": 0,
         "errors": [],
     }
@@ -219,14 +222,31 @@ def run_reextract(mode: str = "outdated", limit: Optional[int] = None) -> dict:
                 maybe_set("l2_url", extracted.get("l2_url") or regex_l2)
                 maybe_set("jira_url", extracted.get("jira_url") or regex_jira)
 
-                # SE re-attribution — only override if there's no current SE,
-                # OR the current SE doesn't exist in our DB (orphan). If a
-                # human has set a real SE via the edit UI, we leave it alone.
-                if not row.se_email and new_se_email:
+                # SE re-attribution — apply on EVERY re-extract.
+                # Rationale: every existing row was created under the old code
+                # that assigned the @SE Coach tagger as owner; that's exactly
+                # the data we need to correct. We track filled vs reassigned
+                # separately so the result panel shows what actually changed.
+                # If an admin manually edited the SE via the UI and then the
+                # next re-extract overwrites it, they can re-edit — re-extract
+                # is a manual admin action, not a recurring job.
+                if new_se_email and new_se_email != (row.se_email or "").lower():
+                    old_email = row.se_email or ""
+                    old_name = row.se_name or ""
                     row.se_email = new_se_email
                     row.se_name = new_se_name
-                    stats["fields_backfilled"]["se_email"] += 1
-                    changes.append(f"se={new_se_email}")
+                    if old_email:
+                        stats["fields_backfilled"]["se_email_reassigned"] += 1
+                        stats["se_reassignments"].append({
+                            "row_id": row.id,
+                            "from": f"{old_name} <{old_email}>",
+                            "to": f"{new_se_name} <{new_se_email}>",
+                            "details": (row.details or "")[:80],
+                        })
+                        changes.append(f"se: {old_email} → {new_se_email}")
+                    else:
+                        stats["fields_backfilled"]["se_email_filled"] += 1
+                        changes.append(f"se={new_se_email} (was empty)")
 
                 # Details — only overwrite if blank (we're more careful here
                 # because details may have been edited)

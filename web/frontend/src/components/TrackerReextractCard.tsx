@@ -5,6 +5,13 @@ import { api } from "@/lib/api";
 
 const fetcher = (url: string): Promise<any> => api(url);
 
+type SEReassignment = {
+  row_id: number;
+  from: string;
+  to: string;
+  details: string;
+};
+
 type Status = {
   in_progress: boolean;
   last_result: {
@@ -17,6 +24,7 @@ type Status = {
     skipped_thread_gone?: number;
     failed?: number;
     fields_backfilled?: Record<string, number>;
+    se_reassignments?: SEReassignment[];
     errors?: string[];
   } | null;
 };
@@ -95,6 +103,22 @@ export function TrackerReextractCard() {
                 .map(([k, n]) => `${k}: ${n}`)
                 .join(" · ")}
             </div>
+          )}
+          {lr.se_reassignments && lr.se_reassignments.length > 0 && (
+            <details className="mt-2 cursor-pointer">
+              <summary className="font-semibold text-ss-navy">
+                {lr.se_reassignments.length} SE re-assignment{lr.se_reassignments.length === 1 ? "" : "s"} (first-poster correction)
+              </summary>
+              <ul className="mt-1.5 ml-4 space-y-1">
+                {lr.se_reassignments.map((r) => (
+                  <li key={r.row_id} className="text-ss-navy">
+                    <span className="font-mono text-[10px] bg-ss-cream rounded px-1">#{r.row_id}</span>{" "}
+                    <span className="line-through opacity-70">{r.from}</span> → <span className="font-semibold">{r.to}</span>
+                    {r.details && <div className="text-ss-navy-soft text-[11px] ml-5 italic">{r.details}</div>}
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
           {lr.errors && lr.errors.length > 0 && (
             <details className="mt-2 cursor-pointer">
