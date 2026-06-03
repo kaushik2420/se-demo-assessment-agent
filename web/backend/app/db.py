@@ -73,6 +73,33 @@ def init_db():
             conn.execute(text(
                 "ALTER TABLE tracker_requests ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP WITH TIME ZONE"
             ))
+            # Analysis lifecycle tracking on calls — added so the SE sees actual
+            # progress vs failure instead of an infinite 'Analyzing…' spinner
+            # when the background worker crashes.
+            conn.execute(text(
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS analysis_status VARCHAR(16) DEFAULT 'pending'"
+            ))
+            conn.execute(text(
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS analysis_started_at TIMESTAMP WITH TIME ZONE"
+            ))
+            conn.execute(text(
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS analysis_error TEXT"
+            ))
+            # Backfill existing rows to 'done' (they already have scorecards) —
+            # SQL keeps it cheap and idempotent: anything with a scorecard is
+            # done, anything without is failed (we can't recover their analysis
+            # without re-running, so set to failed so the user can retry).
+            conn.execute(text(
+                "UPDATE calls SET analysis_status='done' "
+                "WHERE analysis_status='pending' "
+                "AND id IN (SELECT call_id FROM scorecards)"
+            ))
+            conn.execute(text(
+                "UPDATE calls SET analysis_status='failed', "
+                "analysis_error='Pre-existing call without scorecard — click Retry to analyze' "
+                "WHERE analysis_status='pending' "
+                "AND id NOT IN (SELECT call_id FROM scorecards)"
+            ))
             conn.commit()
         except Exception as e:
             print(f"[init_db] non-fatal: {e}")

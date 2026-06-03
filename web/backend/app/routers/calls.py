@@ -93,6 +93,34 @@ def delete_call(
     return None
 
 
+@router.post("/{call_id}/retry", response_model=dict)
+def retry_call_analysis(
+    call_id: str,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Re-trigger analysis for a failed (or stuck) call. The owning SE can
+    retry their own calls; manager/admin can retry any call. Resets status
+    to 'pending' then kicks off the analysis thread."""
+    c = db.query(Call).filter(Call.call_id == call_id).first()
+    if not c:
+        raise HTTPException(404, "Call not found")
+    if user.role == "se":
+        u = db.query(User).filter(User.email == user.email).first()
+        if not u or c.se_id != u.id:
+            raise HTTPException(403, "Not your call")
+    if c.analysis_status == "analyzing":
+        return {"status": "already_running",
+                "message": "Analysis is currently running — wait for it to complete or fail before retrying."}
+
+    from app.services.upload_analysis import kickoff_analysis
+    print(f"[calls] retry triggered for call_id={call_id} by {user.email!r} "
+          f"(was status={c.analysis_status!r})")
+    kickoff_analysis(c.id, c.call_id)
+    return {"status": "started",
+            "message": "Analysis restarted. Refresh the page in 30-90 seconds."}
+
+
 @router.get("/{call_id}", response_model=CallDetail)
 def get_call(
     call_id: str,
@@ -114,6 +142,10 @@ def get_call(
             "stated_use_case": c.stated_use_case, "call_type": c.call_type,
             "duration_min": c.duration_min, "source": c.source,
             "date": (c.call_date or c.created_at).isoformat(),
+            # Lifecycle fields — drive the UI between Analyzing / Failed / Done
+            "analysis_status": c.analysis_status or "done",
+            "analysis_started_at": c.analysis_started_at.isoformat() if c.analysis_started_at else None,
+            "analysis_error": c.analysis_error,
         },
         scorecard=(c.scorecard and {
             "weighted_final": c.scorecard.weighted_final,

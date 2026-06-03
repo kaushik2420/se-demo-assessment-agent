@@ -46,6 +46,12 @@ class Call(Base):
     source: Mapped[str] = mapped_column(String(32), default="upload")  # upload | granola
     call_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     transcript: Mapped[str] = mapped_column(Text)
+    # Analysis status — tracked across upload → background analysis lifecycle.
+    # Values: 'pending' (just uploaded) | 'analyzing' (worker picked it up)
+    #       | 'done' (scorecard + insights persisted) | 'failed' (caller can retry)
+    analysis_status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    analysis_started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    analysis_error: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     se: Mapped[User] = relationship(back_populates="calls")

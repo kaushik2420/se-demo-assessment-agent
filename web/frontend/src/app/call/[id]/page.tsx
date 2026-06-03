@@ -12,11 +12,15 @@ const fetcher = (url: string) => api(url);
 export default function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  // Poll every 4s while the scorecard is still pending so the page auto-
-  // refreshes when the background analysis completes. Once we have a
-  // scorecard, polling stops.
+  // Poll every 4s while the analysis is in flight. Stop once we have a
+  // scorecard OR the server has marked the analysis as failed (no point
+  // polling a permanently broken row — the user has to click Retry).
   const { data, error, isLoading } = useSWR<any>(`/calls/${id}`, fetcher, {
-    refreshInterval: (latest) => (latest?.scorecard ? 0 : 4000),
+    refreshInterval: (latest) => {
+      if (latest?.scorecard) return 0;
+      if (latest?.call?.analysis_status === "failed") return 0;
+      return 4000;
+    },
   });
   const { data: me } = useSWR<any>("/auth/me", fetcher);
   const [deleting, setDeleting] = useState(false);
@@ -50,16 +54,7 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
           <p className="text-ss-navy-soft mb-6">
             {call?.call_type} · {call?.duration_min ? `~${call.duration_min} min` : "duration tbd"}
           </p>
-          <div className="bg-ss-cream border border-ss-cyan-soft rounded-xl p-8 text-center">
-            <div className="text-3xl mb-3 animate-pulse">⏳</div>
-            <div className="font-semibold text-ss-navy mb-1">Analyzing your call…</div>
-            <p className="text-sm text-ss-navy-soft max-w-md mx-auto">
-              Claude is reading the transcript and scoring it against the 7-criterion
-              rubric + extracting deal-intelligence signals. This usually takes
-              30-90 seconds. The page refreshes automatically when results land —
-              feel free to keep this tab open or come back later via your dashboard.
-            </p>
-          </div>
+          <AnalysisStatusCard call={call} callId={id} />
         </main>
       </>
     );
@@ -251,6 +246,93 @@ function Insight({ title, body }: { title: string; body: any }) {
     <div className="bg-ss-cream rounded-lg p-3">
       <div className="text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-1">{title}</div>
       <div className="text-ss-navy">{body || "—"}</div>
+    </div>
+  );
+}
+
+/**
+ * Surface what's ACTUALLY happening with the analysis instead of a forever
+ * spinner. Three states:
+ *   - analyzing → pulsing icon + elapsed-time hint, optional "Retry" if >10min
+ *   - failed → red error card with the server-side message + always-on Retry
+ *   - pending → brief transient state right after upload; same UI as analyzing
+ */
+function AnalysisStatusCard({ call, callId }: { call: any; callId: string }) {
+  const status: string = call?.analysis_status || "analyzing";
+  const startedAt: string | null = call?.analysis_started_at || null;
+  const errorMsg: string | null = call?.analysis_error || null;
+  const elapsedMin = startedAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 60000))
+    : 0;
+
+  const [retrying, setRetrying] = useState(false);
+  const [retryErr, setRetryErr] = useState<string | null>(null);
+
+  async function handleRetry() {
+    setRetrying(true);
+    setRetryErr(null);
+    try {
+      await api(`/calls/${callId}/retry`, { method: "POST" });
+      // SWR will pick up the new status on its next poll (every 4s)
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e: any) {
+      setRetryErr(String(e?.message || e));
+      setRetrying(false);
+    }
+  }
+
+  if (status === "failed") {
+    return (
+      <div className="bg-red-50 border border-red-300 rounded-xl p-8">
+        <div className="text-3xl mb-3">⚠️</div>
+        <div className="font-semibold text-red-900 mb-2">Analysis failed</div>
+        <p className="text-sm text-red-800 mb-4 max-w-2xl whitespace-pre-wrap">
+          {errorMsg || "Something went wrong during the analysis. The transcript is safely stored — click Retry to try again."}
+        </p>
+        <div className="flex gap-3 items-center">
+          <button onClick={handleRetry} disabled={retrying}
+            className="px-4 py-2 bg-red-700 text-white rounded-lg font-semibold text-sm hover:bg-red-800 disabled:opacity-50 transition">
+            {retrying ? "Restarting…" : "🔁 Retry analysis"}
+          </button>
+          <span className="text-xs text-red-700">
+            If retry keeps failing, ping kaushik with the error message above.
+          </span>
+        </div>
+        {retryErr && <div className="mt-3 text-xs text-red-900">{retryErr}</div>}
+      </div>
+    );
+  }
+
+  // analyzing / pending state
+  const isStuck = elapsedMin >= 10;
+  return (
+    <div className="bg-ss-cream border border-ss-cyan-soft rounded-xl p-8 text-center">
+      <div className="text-3xl mb-3 animate-pulse">⏳</div>
+      <div className="font-semibold text-ss-navy mb-1">
+        {isStuck ? "Still analyzing… this is taking longer than usual" : "Analyzing your call…"}
+      </div>
+      <p className="text-sm text-ss-navy-soft max-w-md mx-auto mb-3">
+        Claude is reading the transcript and scoring it against the 7-criterion rubric +
+        extracting deal-intelligence signals. This usually takes 30-90 seconds.
+        The page refreshes automatically when results land.
+      </p>
+      {startedAt && (
+        <p className="text-xs text-ss-navy-soft mb-3">
+          Started {elapsedMin === 0 ? "just now" : `${elapsedMin} minute${elapsedMin === 1 ? "" : "s"} ago`}
+        </p>
+      )}
+      {isStuck && (
+        <div className="mt-3">
+          <button onClick={handleRetry} disabled={retrying}
+            className="px-4 py-2 bg-ss-navy text-white rounded-lg font-semibold text-sm hover:bg-ss-navy-dark disabled:opacity-50 transition">
+            {retrying ? "Restarting…" : "🔁 Force retry"}
+          </button>
+          <p className="text-xs text-ss-navy-soft mt-2 italic">
+            The worker may have crashed — clicking retry kicks off a fresh analysis.
+          </p>
+          {retryErr && <div className="mt-2 text-xs text-red-700">{retryErr}</div>}
+        </div>
+      )}
     </div>
   );
 }

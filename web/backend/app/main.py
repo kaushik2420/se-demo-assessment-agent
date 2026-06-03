@@ -54,6 +54,19 @@ def _startup():
     else:
         print("[scheduler] GRANOLA_API_KEY not set — auto-sync disabled")
 
+    # Upload analysis: mark stuck-in-'analyzing' calls as failed every 5
+    # minutes so the user gets a Retry button instead of a forever spinner.
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler as _BS3
+        from app.services.upload_analysis import mark_stuck_as_failed
+        s3 = _BS3(timezone="UTC")
+        s3.add_job(mark_stuck_as_failed, "interval", minutes=5,
+                   id="analysis_stuck_cleanup", max_instances=1, coalesce=True)
+        s3.start()
+        print("[scheduler] Upload-analysis stuck-cleanup every 5 min — enabled")
+    except Exception as e:
+        print(f"[scheduler] failed to start stuck-cleanup: {e}")
+
     # Slack tracker — two daily jobs:
     #   - 03:00 UTC: refresh every open thread (re-pull comments, backfill URLs)
     #   - 09:00 UTC: staleness reminders for rows untouched >15 days
