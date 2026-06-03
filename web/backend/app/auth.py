@@ -24,7 +24,10 @@ from jose import JWTError, jwt
 
 SECRET_KEY = os.getenv("JWT_SECRET", "dev-only-do-not-use-in-prod")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+# 7 days — internal coaching tool, mid-day logouts after a 24h session were
+# disruptive (uploads happen sporadically across a week). Trading a small
+# session-stealing risk for materially less friction.
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 BCRYPT_ROUNDS = 12
 
 

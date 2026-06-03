@@ -29,7 +29,16 @@ export async function api<T = unknown>(
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
   if (res.status === 401) {
     clearToken();
-    if (typeof window !== "undefined") window.location.href = "/login";
+    if (typeof window !== "undefined") {
+      // Preserve where the user was so login can bounce them back instead of
+      // dumping them at /dashboard and losing their context.
+      const here = window.location.pathname + window.location.search;
+      const next = here && here !== "/login" ? `?next=${encodeURIComponent(here)}` : "";
+      // Avoid an infinite redirect loop if we're ALREADY on /login
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = `/login${next}`;
+      }
+    }
     throw new Error("Unauthorized");
   }
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);

@@ -45,6 +45,24 @@ FILLER_RE = re.compile(r"\b(um|uh|yeah|right\?|you know|kind of|sort of|I mean)\
 TIMESTAMP_RE = re.compile(r"^\s*[\[(]?\d{1,2}(:\d{2}){1,2}[\])]?\s*$",
                           re.MULTILINE)
 
+# Strip VTT/SRT-style timecode lines (Zoom export, Otter, etc):
+#   "00:00:01.500 --> 00:00:04.200"   (VTT, dot fractional)
+#   "00:00:01,500 --> 00:00:04,200"   (SRT, comma fractional)
+#   "0:00:01 --> 0:00:04"             (no fractional)
+VTT_TIMECODE_RE = re.compile(
+    r"^\s*\d{1,2}:\d{2}(:\d{2})?([.,]\d{1,3})?\s*-->\s*\d{1,2}:\d{2}(:\d{2})?([.,]\d{1,3})?.*$",
+    re.MULTILINE,
+)
+
+# Strip SRT sequence-number lines (a single integer on its own line, typical
+# in SRT/Zoom exports before each subtitle block). Be careful not to nuke
+# legitimate one-line-of-digits content — we only match lines that are JUST
+# 1-4 digits.
+SRT_INDEX_RE = re.compile(r"^\s*\d{1,4}\s*$", re.MULTILINE)
+
+# WEBVTT header line — appears once at top of VTT files
+WEBVTT_HEADER_RE = re.compile(r"^\s*WEBVTT.*$", re.MULTILINE | re.IGNORECASE)
+
 # Strip inline timestamps from speaker lines, e.g.
 #   "John Doe (00:00:23)"        ← Granola
 #   "John Doe [00:00:23]"        ← some Granola variants
@@ -112,6 +130,11 @@ def normalize_transcript_format(text: str) -> str:
         return ""
     # Normalize line endings
     text = text.replace("\r\n", "\n").replace("\r", "\n")
+    # Drop VTT/SRT artifacts that Zoom + Otter exports leave behind when
+    # users paste rather than uploading the .vtt file directly.
+    text = WEBVTT_HEADER_RE.sub("", text)
+    text = VTT_TIMECODE_RE.sub("", text)
+    text = SRT_INDEX_RE.sub("", text)
     # Drop standalone timestamp lines
     text = TIMESTAMP_RE.sub("", text)
 

@@ -4,6 +4,18 @@ import { useRouter } from "next/navigation";
 import { login } from "@/lib/api";
 import { Logo } from "@/components/Logo";
 
+/** Pull ?next=… from the URL safely. If it points anywhere outside our app
+ * (full URL, protocol-relative, etc.) we ignore it to prevent open-redirect. */
+function getNextUrl(): string {
+  if (typeof window === "undefined") return "/dashboard";
+  const p = new URLSearchParams(window.location.search);
+  const raw = p.get("next");
+  if (!raw) return "/dashboard";
+  // Must start with a single "/" and not "//" (protocol-relative)
+  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return "/dashboard";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -17,7 +29,7 @@ export default function LoginPage() {
     setErr(null);
     try {
       await login(email, pwd);
-      router.replace("/dashboard");
+      router.replace(getNextUrl());
     } catch {
       setErr("Invalid email or password.");
     } finally {
