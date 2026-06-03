@@ -19,10 +19,13 @@ export default function UploadPage() {
   const [prospect, setProspect] = useState("");
   const [text, setText] = useState("");
   const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function submit() {
     setSubmitting(true);
+    setError(null);
+    setResult(null);
     const fd = new FormData();
     fd.append("call_type", callType);
     fd.append("prospect_company", prospect);
@@ -31,8 +34,21 @@ export default function UploadPage() {
       const r = await api<any>("/calls/upload", { method: "POST", body: fd });
       setResult(r);
       if (r.accepted && r.redirect) {
-        setTimeout(() => router.push(r.redirect), 1500);
+        // Backend returns immediately; analysis runs in background.
+        // The call detail page shows "Analyzing…" and polls until ready.
+        setTimeout(() => router.push(r.redirect), 800);
       }
+    } catch (e: any) {
+      // Surface the actual error instead of silently re-enabling the button.
+      const msg = String(e?.message || e);
+      // Clean up FastAPI's verbose error shape if present
+      const m = msg.match(/\{.*\}/);
+      let display = msg;
+      if (m) {
+        try { display = JSON.parse(m[0]).detail || msg; } catch {}
+      }
+      setError(display);
+      console.error("[upload] failed:", e);
     } finally {
       setSubmitting(false);
     }
@@ -92,6 +108,21 @@ export default function UploadPage() {
           </div>
           <div className="text-sm">
             {result.validation.detail || result.message}
+          </div>
+          {result.accepted && (
+            <div className="text-xs mt-2 opacity-80 italic">
+              Redirecting to the call page — analysis usually takes 30-90 seconds and refreshes automatically when ready.
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-4 p-4 rounded-lg border bg-red-50 border-red-300 text-red-900">
+          <div className="font-semibold mb-1">Upload failed</div>
+          <div className="text-sm break-words">{error}</div>
+          <div className="text-xs mt-2 opacity-80 italic">
+            Your transcript wasn't lost — just click <strong>Analyze</strong> again to retry. If it keeps failing, ping kaushik with the error above.
           </div>
         </div>
       )}

@@ -12,7 +12,12 @@ const fetcher = (url: string) => api(url);
 export default function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { data, error, isLoading } = useSWR<any>(`/calls/${id}`, fetcher);
+  // Poll every 4s while the scorecard is still pending so the page auto-
+  // refreshes when the background analysis completes. Once we have a
+  // scorecard, polling stops.
+  const { data, error, isLoading } = useSWR<any>(`/calls/${id}`, fetcher, {
+    refreshInterval: (latest) => (latest?.scorecard ? 0 : 4000),
+  });
   const { data: me } = useSWR<any>("/auth/me", fetcher);
   const [deleting, setDeleting] = useState(false);
   const canDelete = me?.role === "admin" || me?.role === "manager";
@@ -34,7 +39,31 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
   if (error) return (<><TopNav /><div className="p-10 text-red-600">Failed: {String(error)}</div></>);
 
   const { call, scorecard, insights } = data;
-  if (!scorecard) return (<><TopNav /><div className="p-10 text-ss-navy-soft">Analysis pending…</div></>);
+  if (!scorecard) {
+    return (
+      <>
+        <TopNav />
+        <main className="max-w-3xl mx-auto p-10">
+          <h1 className="text-2xl font-semibold text-ss-navy mb-1">
+            {call?.prospect_company || "New call"}
+          </h1>
+          <p className="text-ss-navy-soft mb-6">
+            {call?.call_type} · {call?.duration_min ? `~${call.duration_min} min` : "duration tbd"}
+          </p>
+          <div className="bg-ss-cream border border-ss-cyan-soft rounded-xl p-8 text-center">
+            <div className="text-3xl mb-3 animate-pulse">⏳</div>
+            <div className="font-semibold text-ss-navy mb-1">Analyzing your call…</div>
+            <p className="text-sm text-ss-navy-soft max-w-md mx-auto">
+              Claude is reading the transcript and scoring it against the 7-criterion
+              rubric + extracting deal-intelligence signals. This usually takes
+              30-90 seconds. The page refreshes automatically when results land —
+              feel free to keep this tab open or come back later via your dashboard.
+            </p>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   // Backward-compatible read: new shape has `insights.maturity` + `insights.product`;
   // old calls have `insights.cx_maturity` only.
