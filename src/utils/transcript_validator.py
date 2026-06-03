@@ -30,7 +30,35 @@ class ValidationResult:
     normalized: str = ""    # normalized transcript text (callers should use this downstream)
 
 
-SPEAKER_LINE_RE = re.compile(r"^[A-Z][a-zA-Z\s.'-]{1,40}:", re.MULTILINE)
+# Speaker line detector. Allows:
+#   - Names with letters, spaces, dots, apostrophes, hyphens
+#   - Names with digits (Speaker 1 / Speaker 2 / Bot1 — common when transcription
+#     tools can't identify the speaker)
+#   - Underscores (some integrations: speaker_1)
+# Matches lines like "John Doe: …", "Speaker 1: …", "Mary O'Brien: …"
+SPEAKER_LINE_RE = re.compile(r"^[A-Z][\w\s.'-]{0,50}:", re.MULTILINE)
+
+# Strip an inline timestamp that sits BETWEEN a speaker name and the colon.
+# Otter/Avoma/Fellow-style canonical line:
+#   "Speaker 1 (58:03): Perfect."          → "Speaker 1: Perfect."
+#   "Sriram S [12:34:56]: …"               → "Sriram S: …"
+#   "John Doe — 00:01: …"                  → "John Doe: …"
+#   "Parul Gajaraj (58:11): Shadim, …"     → "Parul Gajaraj: Shadim, …"
+#
+# Captures the name (group 1) and rewrites as "<name>:".
+SPEAKER_INLINE_TS_RE = re.compile(
+    r"""^
+    (?P<name>[A-Z][\w\s.'-]{0,50}?)         # speaker name (lazy)
+    \s*
+    (?:                                      # mandatory inline timestamp
+        [•\-–—]\s*\d{1,2}(?::\d{2}){1,2}    #   — HH:MM[:SS]
+        | [\[(]\s*\d{1,2}(?::\d{2}){1,2}\s*[\])]   #   (HH:MM) or [HH:MM:SS]
+        | \s\d{1,2}:\d{2}(?::\d{2})?         #   bare " HH:MM" or " HH:MM:SS" (rarer)
+    )
+    \s*:                                     # the speaker-line colon
+    """,
+    re.MULTILINE | re.VERBOSE,
+)
 NOTES_MARKERS_RE = re.compile(
     r"^\s*[-•*]\s|"
     r"\bAction items?:|\bKey takeaways?:|\bNext steps?:|"
@@ -135,6 +163,10 @@ def normalize_transcript_format(text: str) -> str:
     text = WEBVTT_HEADER_RE.sub("", text)
     text = VTT_TIMECODE_RE.sub("", text)
     text = SRT_INDEX_RE.sub("", text)
+    # Strip inline timestamps embedded in speaker labels: rewrites
+    # "Speaker 1 (58:03): foo" → "Speaker 1: foo" so downstream regex sees
+    # canonical "Name: text" lines regardless of source tool.
+    text = SPEAKER_INLINE_TS_RE.sub(r"\g<name>:", text)
     # Drop standalone timestamp lines
     text = TIMESTAMP_RE.sub("", text)
 
@@ -260,28 +292,82 @@ def validate(text: str) -> ValidationResult:
 
 
 def validate_with_llm_fallback(text: str, llm=None) -> ValidationResult:
-    """For borderline cases, optionally double-check with a quick LLM call."""
+    """Two-stage validator: cheap heuristics first, then LLM fallback if they fail.
+
+    The LLM does two jobs:
+      1. CLASSIFY: is this a transcript or notes/agenda/summary?
+      2. NORMALIZE: if it's a transcript in an unfamiliar shape (e.g. some
+         tool we haven't written a regex for), rewrite it into canonical
+         'Name: text' form so the scoring pipeline can read it.
+
+    The fallback only triggers when heuristics fail (`kind != 'ok'`). That keeps
+    the cost at ~$0.005 per failed-validation upload — and the user no longer
+    needs to manually re-format anything for unknown transcript formats.
+    """
     result = validate(text)
-    if result.kind != "warn" or llm is None:
+
+    # Already passed heuristics → no LLM call needed
+    if result.ok and result.kind == "ok":
         return result
 
-    system = "You are a strict classifier. Reply with only 'TRANSCRIPT' or 'NOTES'."
+    # Borderline 'warn' or failure cases where the user has substantive content
+    # (long enough to be worth normalising). Skip if we have no LLM or input
+    # is genuinely empty/tiny.
+    if llm is None or len(text or "") < 500:
+        return result
+
+    # Don't re-classify obvious 'notes/doc' rejections from heuristics — those
+    # detected high concentration of headings/bullets, the LLM agreeing would
+    # be wasted spend.
+    if result.kind in ("notes", "doc"):
+        return result
+
+    system = (
+        "You handle messy call transcripts pasted by users. Two jobs:\n"
+        "1. Classify whether the text is a real spoken-word call transcript "
+        "OR meeting notes/summary/agenda.\n"
+        "2. If it IS a transcript but in a non-canonical format (unusual "
+        "timestamps, weird speaker labels, missing colons, exported from a "
+        "tool we don't recognise), REWRITE it into canonical "
+        "'Speaker Name: spoken text' lines — one turn per line, timestamps "
+        "stripped. Preserve every word the speakers actually said. "
+        "If a speaker is genuinely unidentifiable, use 'Unknown:'. "
+        "Do NOT summarise or condense — output the full conversational text."
+    )
     user = (
-        "Is the following text a raw spoken-word call transcript (speaker turns, "
-        "conversational fragments) or post-call meeting notes / summary / agenda?\n\n"
-        f"---\n{text[:3000]}\n---"
+        "Return JSON with this shape:\n"
+        '{\n'
+        '  "classification": "TRANSCRIPT" | "NOTES",\n'
+        '  "normalized": "<full transcript in canonical Speaker: text format, '
+        'or empty string if classification is NOTES>"\n'
+        '}\n\n'
+        f"INPUT:\n---\n{text[:30000]}\n---"
     )
     try:
         raw = llm.chat_json(
-            system=system + " Output JSON: {\"classification\": \"TRANSCRIPT\" | \"NOTES\"}",
+            system=system,
             user=user,
-            mock_response={"classification": "TRANSCRIPT"},
+            mock_response={"classification": "TRANSCRIPT", "normalized": text},
         )
-        if raw.get("classification") == "NOTES":
-            return ValidationResult(False, "notes",
-                                    "LLM classified this as notes, not a transcript",
-                                    "Even though it looked like a transcript at first glance, the content reads like a summary. Please paste the raw transcript.",
-                                    result.metrics, result.normalized)
-    except Exception:
-        pass
+        cls = (raw.get("classification") or "").upper()
+        if cls == "NOTES":
+            return ValidationResult(
+                False, "notes",
+                "LLM classified this as notes, not a transcript",
+                "Even though it looked like a transcript at first glance, the "
+                "content reads like a summary. Please paste the raw transcript.",
+                result.metrics, result.normalized,
+            )
+        normalized = (raw.get("normalized") or "").strip()
+        if cls == "TRANSCRIPT" and normalized:
+            # Re-run heuristics on the LLM-normalized text
+            second = validate(normalized)
+            second.metrics["llm_normalized"] = True
+            if second.ok:
+                return second
+            # If even the LLM's normalisation fails the heuristics, return
+            # whichever is more informative
+            return second if second.kind != "ok" else result
+    except Exception as e:
+        print(f"[validator.llm_fallback] failed: {e}")
     return result

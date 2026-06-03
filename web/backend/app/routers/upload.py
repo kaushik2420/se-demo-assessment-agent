@@ -43,7 +43,7 @@ from app.models import Call, Scorecard, Insights, User
 from src.analysis.scoring_engine import CallContext, score_call
 from src.analysis.insights_extractor import extract_insights
 from src.analysis.llm_client import LLMClient
-from src.utils.transcript_validator import validate, ValidationResult
+from src.utils.transcript_validator import validate, validate_with_llm_fallback, ValidationResult
 
 
 router = APIRouter()
@@ -167,8 +167,17 @@ async def upload_transcript(
             )
         transcript = contents
 
-    # 2. Validate (reject notes/summaries). Cheap — pure regex/word counts.
+    # 2. Validate — heuristics first (cheap), then LLM fallback (~$0.005)
+    # if heuristics rejected what could be a real transcript in an unknown
+    # shape. This means weird Otter / Fellow / proprietary formats no longer
+    # need manual reformatting — Claude rewrites them to canonical for us.
     result: ValidationResult = validate(transcript)
+    if not result.ok:
+        try:
+            fallback_llm = LLMClient(live=bool(os.getenv("ANTHROPIC_API_KEY")))
+            result = validate_with_llm_fallback(transcript, llm=fallback_llm)
+        except Exception as e:
+            print(f"[upload] LLM fallback validator threw: {e}")
     if not result.ok:
         return UploadResponse(
             accepted=False,
