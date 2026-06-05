@@ -24,6 +24,7 @@ class CallType(str, Enum):
     FOLLOWUP_QUERY    = "followup_query"     # short Q&A / technical clarification call
     POC               = "poc"                # proof-of-concept walkthrough / validation
     CLOSURE           = "closure"            # final commercial / commitment call
+    PROCUREMENT       = "procurement"        # vendor security review, IT compliance, procurement walkthrough
     OTHER             = "other"              # default to standard rubric
 
 
@@ -114,6 +115,29 @@ PROFILES: Dict[CallType, CallTypeProfile] = {
             "Skills and Craftsmanship dominate. Penalize heavily for any 'that's on the "
             "roadmap' answer that wasn't disclosed up front. Reward bridging features into "
             "the prospect's actual workflow with their actual data."
+        ),
+    ),
+
+    CallType.PROCUREMENT: CallTypeProfile(
+        label="Procurement / security review",
+        weights={
+            "Communication": 20.0,             # clarity matters when fielding questionnaires
+            "Presentation": 5.0,
+            "Audience Engagement": 5.0,
+            "Solution Skills": 10.0,           # not a sell — just answer accurately
+            "Consultative Approach": 40.0,     # the WHOLE job: technical advisor mode
+            "Touchbase on Pain Points": 10.0,
+            "Craftsmanship": 10.0,             # references to security docs / certifications
+        },
+        prompt_addendum=(
+            "This is a PROCUREMENT / SECURITY REVIEW / IT COMPLIANCE call. The SE is "
+            "in trusted-advisor mode answering questionnaires, walking through SOC 2 / "
+            "compliance posture, fielding integration / data-handling / SLA questions. "
+            "Do NOT penalize for absent demo content, generic environments, or lack of "
+            "value-selling — none of that applies on this call type. Reward accuracy, "
+            "honesty (admitting when something isn't supported instead of bluffing), "
+            "and pointing the prospect to the right doc / right person when applicable. "
+            "Commercial terms / pricing / paperwork = AE's job, not SE's."
         ),
     ),
 

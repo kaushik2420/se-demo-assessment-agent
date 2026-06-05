@@ -10,6 +10,7 @@ const CALL_TYPES = [
   { v: "followup_query",  l: "Follow-up query" },
   { v: "poc",             l: "POC" },
   { v: "closure",         l: "Closure call" },
+  { v: "procurement",     l: "Procurement / Security" },
   { v: "other",           l: "Other" },
 ];
 

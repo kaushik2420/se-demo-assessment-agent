@@ -11,7 +11,7 @@ A running record of every bug, feedback item, and feature request raised by the 
 
 Day-1 deployment: **2026-05-27** (initial build) — first team-facing usage began **2026-05-31** when the Granola Business integration was switched on.
 
-Last updated: **2026-06-03** (latest entry #30)
+Last updated: **2026-06-03** (latest entry #31)
 
 ---
 
@@ -472,6 +472,49 @@ Zero Claude calls (regex + string match only) — runs against ~30 rows in secon
 - `done` → full scorecard renders normally
 
 Polling automatically stops once the scorecard arrives OR the row is marked failed (no point polling a broken row).
+
+**Date:** 2026-06-03
+
+---
+
+## #31 — Team feedback round 1 (Parul + Sushmitha) — analysis quality fixes
+
+**Issue / Feedback:** Two SEs sent detailed feedback after reviewing their own scorecards.
+
+*From Parul:*
+- "AI did not capture the additional customization point I had mentioned verbally."
+- "When I paused to ask if there were any questions before closing the call, the AI interpreted that as a pain point that needed to be addressed."
+- "Discussed potential additional use cases — ticketing was for Phase 2. AI interpreted it as the client still needing to identify phases. A phased rollout had already been discussed during discovery."
+
+*From Sushmitha:*
+- "No demo — showing as negatives in procurement call."
+- "First half of the call and discovery was driven by me but it says only 5-6 lines spoken."
+- "Commercials, process, and paperwork are to be handled by AE's by default."
+- "Product mapping — Captured ThriveSparrow instead of SurveySparrow."
+
+**RCA:** Most issues are prompt-quality problems where Claude lacked the contextual rules an SE coach would naturally apply. Two are inherent limitations of Granola transcription.
+
+**Fix (shipped — scoring + insights bumped to v3):**
+
+1. **SE check-ins are no longer flagged as pain.** Scoring prompt now explicitly says: "any questions?", "does that make sense?", "anything I missed?" etc. are SE facilitation, NOT prospect pain that went unaddressed. Only flag a pain if the PROSPECT raised it and the SE failed to loop back.
+
+2. **AE-domain topics no longer dock the SE.** Scoring prompt explicitly excludes from SE evaluation: commercial terms, pricing, contracts/SOW, procurement process, security questionnaires, billing, legal review. These are AE responsibilities by default — SE stepping aside is good role boundary, not a gap.
+
+3. **Phased rollouts respected.** If the prospect says "Phase 1 / Phase 2" or refers to prior planning, the phases have already been defined — don't flag them as needing identification.
+
+4. **New call type: `procurement`** with appropriate weight profile (Consultative Approach 40%, Solution Skills only 10%, Craftsmanship 10%, no demo expected). Auto-detection in `_detect_call_type()` triggers on title keywords: procurement, security review, vendor security, SOC 2, compliance, infosec, vendor onboarding, security questionnaire, etc. Procurement option added to the upload UI picker.
+
+5. **Stronger product classification rules.** Insights prompt v3 has explicit signal lists per product (e.g. "customer" repeated → SurveySparrow; "employee/team member/manager" repeated → ThriveSparrow), a "DEFAULT to SurveySparrow when uncertain — ThriveSparrow needs EXPLICIT employee-focused signals" rule, and "return Unknown rather than guessing" guidance. Surveysparrow-vs-ThriveSparrow confusion in customer-focused calls (Sushmitha's mis-classified call) should now resolve correctly.
+
+**Honest limitations — NOT fixed in this round:**
+
+- **"5-6 lines spoken" for Sushmitha's call.** This is a Granola transcript-fidelity issue, not analysis logic. Granola only distinguishes the *microphone-source speaker* (= the Granola account holder) from *everyone else mixed together*. If Sushmitha was NOT the Granola account owner for that recording (e.g. she joined someone else's calendar invite), her turns get lumped with the prospect/AE in the "speaker" track and we can't attribute them back to her. The fix is operational, not code: SEs should be the Granola account owner on their own calls so their microphone is identified separately. For calls where SE attribution matters and Granola isn't reliable, pasting a richer per-speaker transcript via the Upload flow is the workaround.
+
+- **Missing specific verbal mentions (Parul's customization point).** This is inherent LLM recall — Claude reads the whole transcript but its summarization will sometimes miss a specific sentence. Re-running with the v3 prompt may catch it; can't guarantee 100%. If a specific point matters, the SE can ask Claude directly via the (planned) per-call chat feature, or note it in the manual coaching action.
+
+- **Cross-call context (Parul's phased rollout already done in discovery).** The system only sees the current call's transcript — no memory of earlier discovery calls with the same prospect. We could solve this by linking calls by prospect_company and feeding earlier-call summaries as context, but that's a bigger architectural change. For now, the v3 prompt at least won't flag phases as "still needing identification" — but it also can't actively reference what was decided in the earlier discovery call.
+
+**Recommended action after deploy:** kaushik re-runs the admin "Re-analyze under current prompts" job (Team page → outdated mode) so Parul's and Sushmitha's existing calls get re-scored under v3.
 
 **Date:** 2026-06-03
 

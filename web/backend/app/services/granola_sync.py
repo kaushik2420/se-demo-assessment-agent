@@ -157,6 +157,13 @@ def get_status() -> dict:
 
 def _detect_call_type(title: str) -> str:
     t = (title or "").lower()
+    # Procurement / security / compliance — handle BEFORE "closure" so a title
+    # like "security review and contract close" doesn't get mis-routed.
+    if any(k in t for k in ("procurement", "security review", "vendor security",
+                            "soc 2", "soc2", "compliance", "infosec",
+                            "vendor onboarding", "vendor risk", "ddq",
+                            "security questionnaire")):
+        return "procurement"
     if "closure" in t or "close" in t or "commitment" in t:
         return "closure"
     if "poc" in t or "proof of concept" in t:
