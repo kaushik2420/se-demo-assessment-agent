@@ -23,6 +23,7 @@ type Section =
   | "per-criterion"
   | "sources"
   | "call-types"
+  | "fairness"
   | "audio-only"
   | "deal-intel"
   | "scorecard"
@@ -164,6 +165,7 @@ const TOC: { label: string; anchor: Section }[] = [
   { label: "Per-criterion", anchor: "per-criterion" },
   { label: "Sources", anchor: "sources" },
   { label: "Call types", anchor: "call-types" },
+  { label: "What we won't penalize", anchor: "fairness" },
   { label: "Audio-only scoring", anchor: "audio-only" },
   { label: "Deal intelligence", anchor: "deal-intel" },
   { label: "Scorecard", anchor: "scorecard" },
@@ -193,9 +195,11 @@ function Content() {
         </p>
         <div className="callout">
           The rubric is the same scoring system kaushik used historically in his "Demo of the Month" Excel sheets —
-          we just automated it and benchmarked it against industry data. Visual-only signals (was your logo on screen?
-          did you use prospect data?) are only scored when the transcript verbally describes them — see
-          "Audio-only scoring" below.
+          we just automated it and benchmarked it against industry data. <strong>v3 (Jun 2026)</strong> added
+          explicit fairness rules — SE check-ins aren't flagged as pain, AE-domain topics aren't your gaps,
+          phased rollouts are respected, and procurement/security calls have their own scoring lens. See
+          "What we won't penalize" below for the full list. Visual-only signals (was your logo on screen?)
+          are only scored when the transcript verbally describes them — see "Audio-only scoring."
         </div>
       </section>
 
@@ -327,6 +331,7 @@ function Content() {
             <tr><td><strong>Follow-up query</strong></td><td>Consult 30% + Solution 20%</td><td>Be a trusted advisor, not an FAQ answerer</td></tr>
             <tr><td><strong>POC</strong></td><td>Solution 35% + Craft 20%</td><td>Penalize "that's on the roadmap"; reward real workflow integration</td></tr>
             <tr><td><strong>Closure</strong></td><td>Consult 35% + Pain 20% (Craft 0%)</td><td>Loop back to original pains. No new feature tours.</td></tr>
+            <tr><td><strong>Procurement</strong></td><td>Consult 40% + Comm 20%</td><td>Vendor security review / SOC 2 / compliance. No demo expected. Accuracy + honesty over selling.</td></tr>
           </tbody>
         </table>
         <p>
@@ -335,8 +340,84 @@ function Content() {
         </p>
       </section>
 
+      <section data-section="fairness">
+        <h3>7. What we won't penalize you for</h3>
+        <p>
+          The scoring rubric exists to coach you on craft — not to nitpick about
+          things that aren't actually your job, or normal call moves that get
+          mis-read as gaps. Based on team feedback, these explicit fairness
+          rules now ship with v3 of the scoring prompt:
+        </p>
+
+        <h4>SE check-ins are facilitation, not "unaddressed pain"</h4>
+        <p>
+          When you pause to ask <em>"any questions?"</em>, <em>"does that make
+          sense?"</em>, <em>"anything I missed?"</em>, <em>"shall I keep going
+          or pause here?"</em> — that's you structuring the call. The earlier
+          version of the prompt sometimes flagged these as pain points the SE
+          failed to address. <strong>Fixed.</strong> Only counts as a pain
+          point if the <em>prospect</em> raised a concern / blocker / requirement
+          and you didn't loop back to it.
+        </p>
+
+        <h4>AE-domain topics are not your responsibility</h4>
+        <p>
+          The following topics are owned by the Account Executive by default —
+          the scoring no longer dings you for "not addressing" them, "not
+          pushing on" them, or "not closing on" them:
+        </p>
+        <ul>
+          <li>Commercial terms / pricing / discount discussion</li>
+          <li>Contracts / SOW / paperwork</li>
+          <li>Procurement / vendor onboarding / security questionnaires (as a process)</li>
+          <li>Billing, invoicing, payment terms</li>
+          <li>Legal review / MSA / DPA</li>
+        </ul>
+        <p>
+          If you happen to handle these gracefully, that's a small bonus. If
+          the AE handles them while you listen, that's <strong>normal and
+          expected</strong>. You stepping aside for AE-domain topics is good
+          role boundary, not a gap.
+        </p>
+
+        <h4>Phased rollouts respected when discovery already scoped them</h4>
+        <p>
+          If the prospect says <em>"Phase 1 is X, Phase 2 will be Y"</em> or
+          references prior planning (<em>"as we discussed, ticketing comes in
+          phase 2"</em>), the analysis now assumes the phases were already
+          defined in an earlier discovery call. It won't flag "phases need to
+          be identified" — that's mature discovery, not a gap. (Caveat: the
+          system only sees the current call's transcript, so it can't proactively
+          reference what was decided in that earlier discovery call. It just
+          won't penalize you for not re-litigating it.)
+        </p>
+
+        <h4>Procurement / security-review calls have their own scoring lens</h4>
+        <p>
+          When the call is a vendor security review, SOC 2 walkthrough, IT
+          compliance call, or procurement questionnaire — you're in
+          trusted-advisor mode, not selling mode. The new <strong>"Procurement"
+          call type</strong> shifts the weights accordingly: Consultative
+          Approach jumps to 40%, Solution Skills drops to 10%, Craftsmanship
+          drops to 10%. The analysis rewards accuracy, honesty (admitting when
+          something isn't supported instead of bluffing), and pointing the
+          prospect to the right doc / right person. It does NOT penalize you
+          for the absence of demo content or value-selling — neither applies
+          on this call type.
+        </p>
+        <div className="callout">
+          <strong>Pick the right call type at upload time.</strong> If you
+          select "demo" for what was actually a procurement call, you'll be
+          scored against the wrong lens — Craftsmanship and Solution Skills
+          will look weak through no fault of yours. Granola titles with
+          "security review", "SOC 2", "compliance", "vendor onboarding" get
+          auto-routed to Procurement; for manual uploads, pick it from the
+          Call Type selector.
+        </div>
+      </section>
+
       <section data-section="audio-only">
-        <h3>7. Audio-only scoring — how we handle visual signals</h3>
+        <h3>8. Audio-only scoring — how we handle visual signals</h3>
         <p>
           The analysis only ever sees a <strong>written transcript of the audio</strong>. We never have video,
           screenshots, or the actual demo screen. That matters because several sub-criteria in the rubric are about
@@ -368,7 +449,7 @@ function Content() {
       </section>
 
       <section data-section="deal-intel">
-        <h3>8. Deal-intelligence signals — what we extract beyond the score</h3>
+        <h3>9. Deal-intelligence signals — what we extract beyond the score</h3>
         <p>
           Each call also gets a structured extract of <strong>deal-context</strong> signals — visible on the call
           detail page and rolled up into the manager + CEO dashboards. The score is the SE's coaching loop; the
@@ -400,7 +481,7 @@ function Content() {
       </section>
 
       <section data-section="scorecard">
-        <h3>9. What's in your scorecard</h3>
+        <h3>10. What's in your scorecard</h3>
         <p>Every scorecard has the following:</p>
         <ul>
           <li><strong>Final weighted score + industry percentile</strong> — the headline. Use it for trend, not for ego.</li>
@@ -418,7 +499,39 @@ function Content() {
       </section>
 
       <section data-section="faq">
-        <h3>10. FAQ</h3>
+        <h3>11. FAQ</h3>
+        <p><strong>My procurement / security-review call got dinged for "no demo." Why?</strong><br/>
+          That was the old behaviour — fixed in v3. The system now has a dedicated
+          "Procurement" call type with completely different weights (Consultative
+          40%, Solution Skills only 10%, Craftsmanship 10%, no demo expected).
+          If your past procurement call was scored under "demo" by mistake, ask
+          kaushik to re-run the analysis after the deploy; the new call type will
+          be applied automatically for titles containing "security review",
+          "SOC 2", "vendor onboarding", etc. For manual uploads, pick "Procurement
+          / Security" from the call-type selector.
+        </p>
+        <p><strong>I asked "any questions?" before closing — why was that flagged as unaddressed pain?</strong><br/>
+          That was the old behaviour — fixed in v3. SE check-ins like "any
+          questions?", "does that make sense?", "anything I missed?" are now
+          recognized as facilitation, not unaddressed pain. Only the
+          <em>prospect's</em> raised concerns count as pain points.
+        </p>
+        <p><strong>The scoring said I should have pushed harder on commercials / contracts. But that's the AE's job.</strong><br/>
+          Agreed — fixed in v3. The analysis now explicitly excludes AE-domain
+          topics (pricing, contracts, paperwork, procurement process, billing,
+          legal) from SE evaluation. Stepping aside when the AE handles those
+          is good role boundary, not a gap.
+        </p>
+        <p><strong>The system says I spoke only 5-6 lines on a call I drove the discovery for. Why?</strong><br/>
+          This is a Granola transcript-fidelity issue, not analysis logic. Granola
+          only distinguishes its <em>account-owner's microphone</em> from
+          "everyone else mixed together." If you weren't the Granola account
+          owner on that call (e.g. you joined someone else's calendar invite),
+          your turns get lumped with the prospect/AE in a single "speaker" track
+          and we can't recover the attribution. The fix is operational: be the
+          Granola account owner on your own calls. For calls where this fails,
+          paste a richer per-speaker transcript via the Upload flow instead.
+        </p>
         <p><strong>Why is "Craftsmanship" missing or partial on my call?</strong><br/>
           Most of Craftsmanship is about what's on screen (your logo on the dashboard, custom data, working
           integrations). The analysis only sees the audio transcript — so those sub-criteria are only scored when
@@ -474,7 +587,7 @@ function Content() {
       </section>
 
       <section data-section="managers">
-        <h3>11. For managers — how to use this</h3>
+        <h3>12. For managers — how to use this</h3>
         <ul>
           <li><strong>Don't lead with percentile in 1:1s.</strong> Lead with the single coaching action.</li>
           <li><strong>Watch the trend, not the snapshot.</strong> A great SE having a bad month is a coaching conversation. Three months of decline is a process intervention.</li>
