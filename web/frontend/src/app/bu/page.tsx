@@ -92,8 +92,10 @@ function fmtDate(s: string | null): string {
   catch { return s; }
 }
 
-function exportCsv(name: string, headers: string[], rows: (string | number | null)[][]) {
-  const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""').replace(/\n/g, " ")}"`;
+function exportCsv(name: string, headers: string[], rows: (string | number | null | undefined)[][]) {
+  // String(null) → "null" and String(undefined) → "undefined" — neither is what
+  // we want in a spreadsheet. Coerce both to "" before serialising.
+  const esc = (v: unknown) => `"${(v == null ? "" : String(v)).replace(/"/g, '""').replace(/\n/g, " ")}"`;
   const csv = [headers.map(esc).join(","), ...rows.map(r => r.map(esc).join(","))].join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
