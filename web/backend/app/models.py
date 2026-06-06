@@ -52,6 +52,25 @@ class Call(Base):
     analysis_status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
     analysis_started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     analysis_error: Mapped[Optional[str]] = mapped_column(Text)
+    # Deal-anatomy enrichment — fields SEs fill in once they have the data.
+    # Auto-fill where possible from insights; SEs override / add what's missing.
+    deal_outcome: Mapped[Optional[str]] = mapped_column(String(16), index=True)  # open | won | lost | no_decision
+    closed_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    go_live_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    discovery_source_override: Mapped[Optional[str]] = mapped_column(String(32))
+    aha_moment_override: Mapped[Optional[str]] = mapped_column(Text)
+    enrichment_notes: Mapped[Optional[str]] = mapped_column(Text)
+    # HubSpot / CRM data — entered manually until we wire a real CRM sync.
+    # deal_value is treated as a single currency for aggregations; the
+    # currency code lets the UI display the right symbol per-row. SEs are
+    # asked to enter USD-equivalent when they want totals to be meaningful.
+    deal_value: Mapped[Optional[float]] = mapped_column(Float)
+    deal_currency: Mapped[Optional[str]] = mapped_column(String(8), default="USD")
+    deal_stage: Mapped[Optional[str]] = mapped_column(String(32), index=True)  # see DEAL_STAGES below
+    crm_deal_url: Mapped[Optional[str]] = mapped_column(String(1024))
+    expected_close_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    enrichment_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    enrichment_updated_by: Mapped[Optional[str]] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     se: Mapped[User] = relationship(back_populates="calls")

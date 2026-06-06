@@ -11,7 +11,7 @@ A running record of every bug, feedback item, and feature request raised by the 
 
 Day-1 deployment: **2026-05-27** (initial build) — first team-facing usage began **2026-05-31** when the Granola Business integration was switched on.
 
-Last updated: **2026-06-03** (latest entry #31)
+Last updated: **2026-06-05** (latest entry #33)
 
 ---
 
@@ -517,6 +517,79 @@ Polling automatically stops once the scorecard arrives OR the row is marked fail
 **Recommended action after deploy:** kaushik re-runs the admin "Re-analyze under current prompts" job (Team page → outdated mode) so Parul's and Sushmitha's existing calls get re-scored under v3.
 
 **Date:** 2026-06-03
+
+---
+
+## #32 — BU Head dashboard for Rishul — deal anatomy, buying committee, velocity, incumbent displacement, aha patterns
+
+**Issue / Feedback:** BU Head Rishul reviewed the prototype dashboard, found the direction useful, asked for additional deal-anatomy detail: buying committee composition with titles, primary/secondary users, the aha moment that sealed the deal, days from first demo → close, days from close → go-live, previous tool + years used + switching reason, how prospects discovered us. Anything not auto-extractable should be an SE-editable field.
+
+**RCA:** N/A — feature request.
+
+**Fix (shipped):**
+
+1. **Insights prompt v4** — added `buying_committee[]` (with role: champion / decision_maker / primary_user / secondary_user / it_security / procurement / finance / exec_sponsor / influencer), `primary_users`, `incumbent` (tool / years_using / experience / switching_reason), `discovery_source`, `aha_candidates[]`. All auto-extracted from the transcript.
+
+2. **`Call` schema additions** — `deal_outcome` (open/won/lost/no_decision), `closed_date`, `go_live_date`, `discovery_source_override`, `aha_moment_override`, `enrichment_notes`, `enrichment_updated_at`, `enrichment_updated_by`. Idempotent ALTER TABLE migration in `db.py::init_db()`.
+
+3. **`PATCH /calls/{call_id}/enrichment`** — owning SE can edit their own call; manager/admin can edit any. CEO/BU head are read-only.
+
+4. **New role `bu_head`** added to deps + TopNav. Admin + manager + CEO + bu_head can view `/bu`. Team page user-creation includes bu_head option.
+
+5. **`GET /dashboard/bu`** aggregator — wins (with full anatomy), buying committee patterns (with score-when-present vs score-when-absent), deal velocity cohorts (median + P90, split by product/POC/source/maturity), incumbent displacement (with top switching reason), discovery source (with win rate per channel), aha patterns (by category — what's actually closing deals).
+
+6. **`/bu` page** — data-dense, export-first, no graphics. Every panel has a `⤓ CSV` button that downloads the actual table data. Print/PDF button at top for board-deck snapshots. Deal-anatomy cards for each win show buying committee with role pills, previous tool, discovery source, demo→close + close→go-live days, and the aha moment as a teal pull-quote.
+
+7. **Enrichment edit form on `/call/[id]`** — SE clicks "✎ Edit fields", form has deal outcome selector, close/go-live date pickers, discovery source override (dropdown matching the v4 enum), aha override (textarea — prefill auto-extracted candidate), enrichment notes (free text).
+
+8. **Auto-extracted deal-anatomy surfaced** on the existing call detail deal-intelligence grid — Previous tool, Discovery source, Buying committee (N), Primary users. So SEs see what was auto-extracted before they decide what to override.
+
+**Recommended action after deploy:** kaushik triggers the admin "Re-analyze under current prompts" job to backfill the v4 fields onto existing analyzed calls. New calls automatically use v4. SEs then go through their wins and fill in `deal_outcome=won`, `closed_date`, `go_live_date` from the corresponding CRM record.
+
+**Open follow-ups (deferred to next iteration):**
+- HubSpot/Salesforce sync to auto-populate close + go-live dates (removes manual entry).
+- Monthly emailed digest of the BU dashboard (Render mail + Jinja template).
+- ACV / deal-value weighting once CRM is connected (currently using deal counts).
+
+**Date:** 2026-06-05
+
+---
+
+## #33 — Manual HubSpot fields on Call + ACV-weighted BU dashboard panels
+
+**Issue / Feedback:** Kaushik confirmed the BU dashboard direction but flagged that real HubSpot integration would take too long. Asked for the same data fields exposed as SE-editable inputs so the dollar-weighted panels can work today.
+
+**RCA:** Feature scope decision — defer real CRM integration, ship manual entry first.
+
+**Fix (shipped):**
+
+1. **5 new manual columns on `Call`**: `deal_value` (numeric), `deal_currency` (default USD), `deal_stage` (10-value enum from prospecting → closed_won/lost), `crm_deal_url` (link back to HubSpot deal), `expected_close_date`. Idempotent ALTER TABLE migration.
+
+2. **Enrichment form on `/call/[id]` now has three labeled sections:**
+   - **Deal status (from HubSpot — manual for now)**: outcome, stage, value, currency, CRM link, expected close
+   - **Dates after close**: closed date, go-live date
+   - **Context (override auto-extracted)**: discovery source override, aha override, notes
+
+3. **BU dashboard headlines row 2** added: *Won this period ($)*, *Open pipeline ($)*, *Pipeline at risk ($)* (open deals with loss-risk signals), *Avg deal size*. With an italic footnote noting the multi-currency caveat.
+
+4. **New "Pipeline by stage" panel** showing deal count + how many have $ entered + total value per stage, with "missing values" warning on stages where SEs haven't filled in.
+
+5. **Wins panel cards now show ACV prominently** (top-right, emerald) next to the velocity numbers, plus a small "HubSpot ↗" link to the source-of-truth deal page if `crm_deal_url` is filled.
+
+6. **Discovery source table extended** with *Total won $* and *Avg deal size* columns — Rishul can see "Referrals: 6 wins, $580K total, avg $96K" instead of just "Referrals: 6 wins."
+
+**Honest caveats kept in the UI:**
+- Multi-currency: aggregations sum across currencies. Footnote tells SEs to enter USD-equivalent if they want accurate totals. HubSpot sync solves this properly later.
+- "% of stages with missing values" callout on the Pipeline panel — Rishul will see immediately how much data SEs have entered vs not.
+
+**Recommended SE rollout:** kaushik sends a short Slack note asking each SE to go to their current open deals + recent closed deals, and fill in deal_value + deal_stage + crm_deal_url. ~5 min per deal × ~10 deals per SE = 50 min one-time backfill per SE. Going forward, it's a 30-second add at the time of deal-stage change.
+
+**Open follow-ups (deferred):**
+- Real HubSpot connector via OAuth, syncing deal value + stage + close date + amount currency hourly.
+- Per-currency aggregations on the BU panels (separate totals per currency code) once we have HubSpot's currency on each deal.
+- ACV-weighted feature-gap and loss-risk panels (currently still deal-count weighted).
+
+**Date:** 2026-06-05
 
 ---
 

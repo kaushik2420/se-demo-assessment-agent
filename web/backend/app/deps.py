@@ -12,7 +12,7 @@ from app.auth import decode_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-Role = Literal["se", "manager", "ceo", "admin"]
+Role = Literal["se", "manager", "ceo", "bu_head", "admin"]
 
 
 class CurrentUser:

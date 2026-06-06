@@ -93,6 +93,134 @@ def delete_call(
     return None
 
 
+class EnrichmentPatch(BaseModel):
+    """Deal-anatomy fields SEs fill in once they have the data.
+    All optional — omitted keys are left unchanged. Set a field to empty
+    string to clear it."""
+    deal_outcome: str | None = None       # "open" | "won" | "lost" | "no_decision"
+    closed_date: str | None = None         # ISO "YYYY-MM-DD"
+    go_live_date: str | None = None        # ISO "YYYY-MM-DD"
+    discovery_source_override: str | None = None  # "referral" | "ae_outbound" | ... | ""
+    aha_moment_override: str | None = None
+    enrichment_notes: str | None = None
+    # HubSpot / CRM fields
+    deal_value: float | None = None
+    deal_currency: str | None = None        # default USD
+    deal_stage: str | None = None
+    crm_deal_url: str | None = None
+    expected_close_date: str | None = None
+
+
+# Single source of truth for deal-stage values shown in dropdowns
+DEAL_STAGES = (
+    "prospecting", "qualified", "demo_scheduled", "demo_completed",
+    "proposal", "negotiation", "verbal_commit", "closed_won",
+    "closed_lost", "no_decision",
+)
+
+
+def _parse_iso_date_simple(s: str | None) -> datetime | None:
+    if not s:
+        return None
+    try:
+        from datetime import date as _d, datetime as _dt, timezone as _tz
+        d = _d.fromisoformat(str(s)[:10])
+        return _dt(d.year, d.month, d.day, tzinfo=_tz.utc)
+    except Exception:
+        return None
+
+
+@router.patch("/{call_id}/enrichment", response_model=dict)
+def patch_call_enrichment(
+    call_id: str,
+    patch: EnrichmentPatch,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update enrichment fields on a call. Permissions:
+      - owning SE can edit their own call
+      - manager / admin can edit any call
+      - CEO / BU head can view (via /calls/{id}) but NOT edit (their job is
+        consumption; SE / manager owns the data quality loop)
+    """
+    c = db.query(Call).filter(Call.call_id == call_id).first()
+    if not c:
+        raise HTTPException(404, "Call not found")
+
+    if user.role == "se":
+        u = db.query(User).filter(User.email == user.email).first()
+        if not u or c.se_id != u.id:
+            raise HTTPException(403, "Not your call")
+    elif user.role not in ("manager", "admin"):
+        raise HTTPException(403, "Read-only role — ask the SE or a manager to edit")
+
+    data = patch.model_dump(exclude_unset=True)
+
+    if "deal_outcome" in data:
+        v = (data["deal_outcome"] or "").strip().lower() or None
+        if v and v not in ("open", "won", "lost", "no_decision"):
+            raise HTTPException(400, f"Invalid deal_outcome: {v!r}")
+        c.deal_outcome = v
+    if "closed_date" in data:
+        c.closed_date = _parse_iso_date_simple(data["closed_date"])
+    if "go_live_date" in data:
+        c.go_live_date = _parse_iso_date_simple(data["go_live_date"])
+    if "discovery_source_override" in data:
+        v = (data["discovery_source_override"] or "").strip() or None
+        c.discovery_source_override = v
+    if "aha_moment_override" in data:
+        v = (data["aha_moment_override"] or "").strip() or None
+        c.aha_moment_override = v
+    if "enrichment_notes" in data:
+        v = (data["enrichment_notes"] or "").strip() or None
+        c.enrichment_notes = v
+    # HubSpot / CRM fields
+    if "deal_value" in data:
+        v = data["deal_value"]
+        if v in ("", None):
+            c.deal_value = None
+        else:
+            try:
+                c.deal_value = float(v)
+            except (TypeError, ValueError):
+                raise HTTPException(400, "deal_value must be a number or empty")
+    if "deal_currency" in data:
+        v = (data["deal_currency"] or "").strip().upper() or None
+        c.deal_currency = v or "USD"
+    if "deal_stage" in data:
+        v = (data["deal_stage"] or "").strip().lower() or None
+        if v and v not in DEAL_STAGES:
+            raise HTTPException(400, f"Invalid deal_stage: {v!r}")
+        c.deal_stage = v
+    if "crm_deal_url" in data:
+        c.crm_deal_url = (data["crm_deal_url"] or "").strip() or None
+    if "expected_close_date" in data:
+        c.expected_close_date = _parse_iso_date_simple(data["expected_close_date"])
+
+    from datetime import datetime as _dt, timezone as _tz
+    c.enrichment_updated_at = _dt.now(_tz.utc)
+    c.enrichment_updated_by = user.email
+    db.commit()
+    print(f"[calls] enrichment updated call_id={call_id} by={user.email!r} "
+          f"fields={list(data.keys())}")
+    return {
+        "ok": True,
+        "deal_outcome": c.deal_outcome,
+        "closed_date": c.closed_date.isoformat() if c.closed_date else None,
+        "go_live_date": c.go_live_date.isoformat() if c.go_live_date else None,
+        "discovery_source_override": c.discovery_source_override,
+        "aha_moment_override": c.aha_moment_override,
+        "enrichment_notes": c.enrichment_notes,
+        "deal_value": c.deal_value,
+        "deal_currency": c.deal_currency,
+        "deal_stage": c.deal_stage,
+        "crm_deal_url": c.crm_deal_url,
+        "expected_close_date": c.expected_close_date.isoformat() if c.expected_close_date else None,
+        "enrichment_updated_at": c.enrichment_updated_at.isoformat(),
+        "enrichment_updated_by": c.enrichment_updated_by,
+    }
+
+
 @router.post("/{call_id}/retry", response_model=dict)
 def retry_call_analysis(
     call_id: str,
@@ -146,6 +274,21 @@ def get_call(
             "analysis_status": c.analysis_status or "done",
             "analysis_started_at": c.analysis_started_at.isoformat() if c.analysis_started_at else None,
             "analysis_error": c.analysis_error,
+            # Deal-anatomy enrichment
+            "deal_outcome": c.deal_outcome,
+            "closed_date": c.closed_date.isoformat() if c.closed_date else None,
+            "go_live_date": c.go_live_date.isoformat() if c.go_live_date else None,
+            "discovery_source_override": c.discovery_source_override,
+            "aha_moment_override": c.aha_moment_override,
+            "enrichment_notes": c.enrichment_notes,
+            "enrichment_updated_at": c.enrichment_updated_at.isoformat() if c.enrichment_updated_at else None,
+            "enrichment_updated_by": c.enrichment_updated_by,
+            # HubSpot / CRM
+            "deal_value": c.deal_value,
+            "deal_currency": c.deal_currency or "USD",
+            "deal_stage": c.deal_stage,
+            "crm_deal_url": c.crm_deal_url,
+            "expected_close_date": c.expected_close_date.isoformat() if c.expected_close_date else None,
         },
         scorecard=(c.scorecard and {
             "weighted_final": c.scorecard.weighted_final,

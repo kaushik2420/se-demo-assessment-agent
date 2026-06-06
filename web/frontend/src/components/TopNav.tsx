@@ -22,6 +22,7 @@ export function TopNav() {
     { href: "/dashboard", label: "My Dashboard", roles: ["se", "manager", "ceo", "admin"] },
     { href: "/manager",   label: "Manager",      roles: ["manager", "admin"] },
     { href: "/executive", label: "Executive",    roles: ["ceo", "manager", "admin"] },
+    { href: "/bu",        label: "BU Head",      roles: ["bu_head", "ceo", "manager", "admin"] },
     { href: "/community", label: "Community",    roles: ["se", "manager", "ceo", "admin"] },
     { href: "/tracker",   label: "Tracker",      roles: ["se", "manager", "ceo", "admin"] },
     { href: "/team",      label: "Team",         roles: ["manager", "admin"] },

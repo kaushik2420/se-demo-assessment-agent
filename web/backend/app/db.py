@@ -85,6 +85,26 @@ def init_db():
             conn.execute(text(
                 "ALTER TABLE calls ADD COLUMN IF NOT EXISTS analysis_error TEXT"
             ))
+            # Deal-anatomy enrichment columns (BU dashboard, Jun 2026 v4)
+            for stmt in (
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS deal_outcome VARCHAR(16)",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS closed_date TIMESTAMP WITH TIME ZONE",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS go_live_date TIMESTAMP WITH TIME ZONE",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS discovery_source_override VARCHAR(32)",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS aha_moment_override TEXT",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS enrichment_notes TEXT",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS enrichment_updated_at TIMESTAMP WITH TIME ZONE",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS enrichment_updated_by VARCHAR(255)",
+                # HubSpot / CRM data — manual until proper sync
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS deal_value DOUBLE PRECISION",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS deal_currency VARCHAR(8) DEFAULT 'USD'",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS deal_stage VARCHAR(32)",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS crm_deal_url VARCHAR(1024)",
+                "ALTER TABLE calls ADD COLUMN IF NOT EXISTS expected_close_date TIMESTAMP WITH TIME ZONE",
+                "CREATE INDEX IF NOT EXISTS idx_calls_deal_outcome ON calls(deal_outcome)",
+                "CREATE INDEX IF NOT EXISTS idx_calls_deal_stage ON calls(deal_stage)",
+            ):
+                conn.execute(text(stmt))
             # Backfill existing rows to 'done' (they already have scorecards) —
             # SQL keeps it cheap and idempotent: anything with a scorecard is
             # done, anything without is failed (we can't recover their analysis

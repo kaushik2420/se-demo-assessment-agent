@@ -224,11 +224,256 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
                        body={`${insights.se_selling_style?.verdict} (${Math.round((insights.se_selling_style?.feature_selling_share || 0) * 100)}% features / ${Math.round((insights.se_selling_style?.value_selling_share || 0) * 100)}% value)`} />
               <Insight title="AE interruptions" body={`${insights.ae_behavior?.interruption_count ?? 0} times`} />
               <Insight title="Prospect engagement" body={insights.prospect_engagement?.sentiment} />
+              <Insight title="Previous tool"
+                       body={insights.incumbent?.tool
+                         ? `${insights.incumbent.tool}${insights.incumbent.years_using ? ` · ${insights.incumbent.years_using}` : ""}${insights.incumbent.switching_reason ? ` — ${insights.incumbent.switching_reason}` : ""}`
+                         : "—"} />
+              <Insight title="Discovery source"
+                       body={insights.discovery_source?.source || "—"} />
+              <Insight title={`Buying committee (${insights.buying_committee?.length || 0})`}
+                       body={(insights.buying_committee || []).map((m: any) =>
+                         `${m.name}${m.title ? ` (${m.title})` : ""} — ${m.role?.replace(/_/g, " ")}`).join(" · ") || "—"} />
+              <Insight title="Primary users"
+                       body={(insights.primary_users || []).join(" · ") || "—"} />
             </div>
           </div>
         )}
+        {/* === Deal enrichment (SE-editable) === */}
+        <DealEnrichmentSection call={call} callId={id} me={me} />
       </main>
     </>
+  );
+}
+
+function DealEnrichmentSection({ call, callId, me }: { call: any; callId: string; me: any }) {
+  const [editing, setEditing] = useState(false);
+  const canEdit = me?.role === "admin" || me?.role === "manager" || me?.role === "se";
+
+  if (editing) {
+    return (
+      <DealEnrichmentForm
+        call={call} callId={callId}
+        onCancel={() => setEditing(false)}
+        onSaved={() => { setEditing(false); window.location.reload(); }}
+      />
+    );
+  }
+  return (
+    <div className="mt-6 bg-white border border-ss-cyan-soft rounded-xl p-6">
+      <div className="flex justify-between items-start mb-4">
+        <h3 className="font-semibold text-ss-navy">Deal enrichment</h3>
+        {canEdit && (
+          <button onClick={() => setEditing(true)}
+            className="px-3 py-1.5 text-xs font-semibold bg-ss-cream border border-ss-cyan-soft text-ss-navy rounded hover:bg-ss-cyan-soft transition">
+            ✎ Edit fields
+          </button>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-4 text-sm">
+        <DetailRow label="Deal outcome" value={call.deal_outcome || "—"} />
+        <DetailRow label="Deal stage" value={call.deal_stage ? call.deal_stage.replace(/_/g, " ") : "—"} />
+        <DetailRow label="Deal value"
+          value={call.deal_value != null
+            ? `${(call.deal_currency || "USD")} ${Number(call.deal_value).toLocaleString()}`
+            : "—"} />
+        <DetailRow label="Closed date"  value={call.closed_date ? new Date(call.closed_date).toLocaleDateString() : "—"} />
+        <DetailRow label="Go-live date" value={call.go_live_date ? new Date(call.go_live_date).toLocaleDateString() : "—"} />
+        <DetailRow label="Expected close date" value={call.expected_close_date ? new Date(call.expected_close_date).toLocaleDateString() : "—"} />
+        <DetailRow label="Discovery source (override)" value={call.discovery_source_override || "(using auto-extracted)"} />
+        <div className="col-span-2">
+          <div className="text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-1">CRM deal link</div>
+          {call.crm_deal_url
+            ? <a href={call.crm_deal_url} target="_blank" rel="noopener noreferrer"
+                 className="text-ss-teal-deep hover:underline text-sm break-all">{call.crm_deal_url}</a>
+            : <div className="text-ss-navy">—</div>}
+        </div>
+        <div className="col-span-3">
+          <div className="text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-1">Aha moment (override)</div>
+          <div className="text-ss-navy italic">{call.aha_moment_override || <span className="not-italic text-ss-navy-soft">(using auto-extracted)</span>}</div>
+        </div>
+        <div className="col-span-3">
+          <div className="text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-1">Enrichment notes</div>
+          <div className="text-ss-navy whitespace-pre-wrap">{call.enrichment_notes || <span className="text-ss-navy-soft">(none)</span>}</div>
+        </div>
+      </div>
+      {call.enrichment_updated_at && (
+        <div className="text-xs text-ss-navy-soft mt-3">
+          Last updated {new Date(call.enrichment_updated_at).toLocaleString()} by {call.enrichment_updated_by}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DealEnrichmentForm({ call, callId, onCancel, onSaved }: {
+  call: any; callId: string; onCancel: () => void; onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    deal_outcome: call.deal_outcome || "",
+    deal_stage: call.deal_stage || "",
+    deal_value: call.deal_value != null ? String(call.deal_value) : "",
+    deal_currency: call.deal_currency || "USD",
+    crm_deal_url: call.crm_deal_url || "",
+    expected_close_date: call.expected_close_date ? call.expected_close_date.slice(0, 10) : "",
+    closed_date: call.closed_date ? call.closed_date.slice(0, 10) : "",
+    go_live_date: call.go_live_date ? call.go_live_date.slice(0, 10) : "",
+    discovery_source_override: call.discovery_source_override || "",
+    aha_moment_override: call.aha_moment_override || "",
+    enrichment_notes: call.enrichment_notes || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true); setErr(null);
+    try {
+      // Coerce deal_value to number or null
+      const payload: any = { ...form };
+      if (form.deal_value === "" || form.deal_value == null) payload.deal_value = null;
+      else payload.deal_value = Number(form.deal_value);
+      await api(`/calls/${callId}/enrichment`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      onSaved();
+    } catch (e: any) {
+      setErr(String(e?.message || e));
+      setSaving(false);
+    }
+  }
+  function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
+    setForm(f => ({ ...f, [k]: v }));
+  }
+
+  return (
+    <form onSubmit={save} className="mt-6 bg-white border-2 border-ss-cyan-deep rounded-xl p-6">
+      <h3 className="font-semibold text-ss-navy mb-1">Edit deal enrichment</h3>
+      <p className="text-xs text-ss-navy-soft mb-5">
+        Deal status + HubSpot data + closure context. Once HubSpot integration is in place, the
+        deal-value / stage / CRM-link fields will sync automatically.
+      </p>
+
+      <div className="text-[11px] font-bold uppercase tracking-wider text-ss-navy-soft mb-2 pb-1 border-b border-ss-cyan-soft">Deal status (from HubSpot — manual for now)</div>
+      <div className="grid grid-cols-4 gap-3 mb-4">
+        <div>
+          <Label>Deal outcome</Label>
+          <select value={form.deal_outcome} onChange={e => set("deal_outcome", e.target.value)} className={selCls}>
+            <option value="">— Set later —</option>
+            <option value="open">Open / in progress</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost</option>
+            <option value="no_decision">No decision</option>
+          </select>
+        </div>
+        <div>
+          <Label>Deal stage</Label>
+          <select value={form.deal_stage} onChange={e => set("deal_stage", e.target.value)} className={selCls}>
+            <option value="">—</option>
+            <option value="prospecting">Prospecting</option>
+            <option value="qualified">Qualified</option>
+            <option value="demo_scheduled">Demo scheduled</option>
+            <option value="demo_completed">Demo completed</option>
+            <option value="proposal">Proposal</option>
+            <option value="negotiation">Negotiation</option>
+            <option value="verbal_commit">Verbal commit</option>
+            <option value="closed_won">Closed-won</option>
+            <option value="closed_lost">Closed-lost</option>
+            <option value="no_decision">No decision</option>
+          </select>
+        </div>
+        <div>
+          <Label>Deal value</Label>
+          <input type="number" min="0" step="any" value={form.deal_value}
+            onChange={e => set("deal_value", e.target.value)}
+            placeholder="e.g. 24000"
+            className={selCls} />
+        </div>
+        <div>
+          <Label>Currency</Label>
+          <select value={form.deal_currency} onChange={e => set("deal_currency", e.target.value)} className={selCls}>
+            <option value="USD">USD</option>
+            <option value="INR">INR</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+            <option value="AUD">AUD</option>
+            <option value="SGD">SGD</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <Label>HubSpot / CRM deal link</Label>
+          <input type="url" value={form.crm_deal_url}
+            onChange={e => set("crm_deal_url", e.target.value)}
+            placeholder="https://app.hubspot.com/contacts/.../deal/..."
+            className={selCls} />
+        </div>
+        <div>
+          <Label>Expected close date</Label>
+          <input type="date" value={form.expected_close_date}
+            onChange={e => set("expected_close_date", e.target.value)} className={selCls} />
+        </div>
+      </div>
+
+      <div className="text-[11px] font-bold uppercase tracking-wider text-ss-navy-soft mb-2 pb-1 border-b border-ss-cyan-soft mt-6">Dates after close</div>
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <Label>Closed date (actual)</Label>
+          <input type="date" value={form.closed_date} onChange={e => set("closed_date", e.target.value)} className={selCls} />
+        </div>
+        <div>
+          <Label>Go-live date</Label>
+          <input type="date" value={form.go_live_date} onChange={e => set("go_live_date", e.target.value)} className={selCls} />
+        </div>
+      </div>
+      <div className="text-[11px] font-bold uppercase tracking-wider text-ss-navy-soft mb-2 pb-1 border-b border-ss-cyan-soft mt-6">Context (override auto-extracted)</div>
+      <div className="mb-4">
+        <Label>Discovery source (override auto-extracted)</Label>
+        <select value={form.discovery_source_override} onChange={e => set("discovery_source_override", e.target.value)} className={selCls}>
+          <option value="">— Use auto-extracted —</option>
+          <option value="referral">Referral (customer / partner)</option>
+          <option value="ae_outbound">AE outbound</option>
+          <option value="organic_search">Organic search</option>
+          <option value="g2_comparison">G2 / comparison page</option>
+          <option value="event_conference">Event / conference</option>
+          <option value="plg_upgrade">PLG / freemium upgrade</option>
+          <option value="analyst_research">Analyst research (Gartner / Forrester)</option>
+          <option value="unknown">Unknown</option>
+        </select>
+      </div>
+      <div className="mb-4">
+        <Label>Aha moment (override) — the prospect quote that sealed the deal</Label>
+        <textarea rows={3} value={form.aha_moment_override} onChange={e => set("aha_moment_override", e.target.value)}
+          placeholder="Leave blank to use the auto-extracted top candidate."
+          className={selCls} />
+      </div>
+      <div className="mb-4">
+        <Label>Enrichment notes (deal context, internal observations)</Label>
+        <textarea rows={3} value={form.enrichment_notes} onChange={e => set("enrichment_notes", e.target.value)} className={selCls} />
+      </div>
+      {err && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-red-800 text-xs">{err}</div>}
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="px-4 py-2 border border-ss-cyan-soft text-ss-navy rounded text-sm hover:bg-ss-cream transition">Cancel</button>
+        <button type="submit" disabled={saving} className="px-4 py-2 bg-ss-navy text-white rounded text-sm font-semibold hover:bg-ss-navy-dark disabled:opacity-50 transition">
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+const selCls = "w-full px-3 py-2 border border-ss-cyan-soft rounded outline-none focus:ring-2 focus:ring-ss-teal bg-white";
+function Label({ children }: { children: React.ReactNode }) {
+  return <label className="block text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-1.5">{children}</label>;
+}
+function DetailRow({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div>
+      <div className="text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-1">{label}</div>
+      <div className="text-ss-navy">{value || "—"}</div>
+    </div>
   );
 }
 

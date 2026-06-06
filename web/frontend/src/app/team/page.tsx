@@ -172,7 +172,7 @@ function CreateUserForm({
 }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"se" | "manager" | "ceo" | "admin">("se");
+  const [role, setRole] = useState<"se" | "manager" | "ceo" | "bu_head" | "admin">("se");
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -237,6 +237,7 @@ function CreateUserForm({
             <>
               <option value="manager">Manager — sees team leaderboard + DOTM</option>
               <option value="ceo">CEO — sees executive summary</option>
+              <option value="bu_head">BU Head — sees BU Health dashboard (deal anatomy)</option>
               <option value="admin">Admin — full access incl. user management</option>
             </>
           )}

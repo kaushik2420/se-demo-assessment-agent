@@ -121,6 +121,36 @@ def _mock_insights(ctx: CallContext) -> dict:
                 "Concerns about migration from current tool",
             ],
         },
+        "buying_committee": [
+            {"name": "Robert Chen", "title": "Head of CX", "role": "champion",
+             "evidence": "Drove the conversation; said 'I'll be the internal champion for this'."},
+            {"name": "Lisa Tang", "title": "CCO", "role": "decision_maker",
+             "evidence": "Final sign-off; appeared in 2nd half of call to ask commercial questions."},
+            {"name": "CSM team (8 CSMs)", "title": "Customer Success Managers", "role": "primary_user",
+             "evidence": "'Our CSMs will use the daily dashboards to triage renewal risk.'"},
+            {"name": "Vikram Nair", "title": "Salesforce admin", "role": "it_security",
+             "evidence": "Asked about SFDC two-way sync security model."},
+        ],
+        "primary_users": [
+            "CSM team (~8 CSMs) will use daily dashboards + alert workflows for renewal risk triage."
+        ],
+        "incumbent": {
+            "tool": "Qualtrics CX",
+            "years_using": "6 years",
+            "experience": "Support became non-existent after their pricing restructure; took 3 months to resolve a critical bug.",
+            "switching_reason": "Loss of confidence in vendor support combined with pricing pressure.",
+        },
+        "discovery_source": {
+            "source": "ae_outbound",
+            "evidence": "'Your AE reached out at the right time — we'd just had another bad Qualtrics support escalation.'",
+        },
+        "aha_candidates": [
+            {
+                "moment": "SE tied every Workflow shown back to renewal-risk outcome the CSM team explicitly asked for.",
+                "quote": "That's exactly what our CSM team has been asking for from Qualtrics for two years. They never built it.",
+                "category": "se_craft",
+            },
+        ],
     }
 
 

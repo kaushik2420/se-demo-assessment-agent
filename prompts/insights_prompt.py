@@ -4,7 +4,7 @@ single demo transcript. Output is JSON so it can be aggregated into monthly
 dashboards and the CEO executive summary.
 """
 
-VERSION = "2026-06-v3"
+VERSION = "2026-06-v4"
 
 SYSTEM = """You are a deal-intelligence analyst. Read a sales-demo transcript and extract
 structured signals about the prospect's needs, the competitive context, and the
@@ -124,8 +124,67 @@ Return a JSON object with this exact shape:
     "sentiment": "negative | neutral | curious | enthusiastic",
     "buying_signals": ["..."],
     "objections": ["..."]
-  }}
+  }},
+  "buying_committee": [
+    {{
+      "name": "Full name if mentioned, else email handle or 'Unknown'",
+      "title": "Their job title if stated or evident from context, else null",
+      "role": "champion | decision_maker | primary_user | secondary_user | it_security | procurement | finance | exec_sponsor | influencer",
+      "evidence": "≤25-word quote or paraphrase showing why you assigned this role"
+    }}
+  ],
+  "primary_users": [
+    "1-3 sentences naming who/which team will use the product day-to-day"
+  ],
+  "incumbent": {{
+    "tool": "Name of the previous/current vendor or 'None / first vendor' for greenfield, or null if not discussed",
+    "years_using": "Approx years used (number or short phrase like 'several years'), or null",
+    "experience": "1-2 sentence summary of how they feel about the incumbent, in their own words where possible",
+    "switching_reason": "1 sentence — the primary reason they're switching"
+  }},
+  "discovery_source": {{
+    "source": "referral | ae_outbound | organic_search | g2_comparison | event_conference | plg_upgrade | analyst_research | unknown",
+    "evidence": "≤25-word quote or paraphrase. Use 'unknown' if not discussed."
+  }},
+  "aha_candidates": [
+    {{
+      "moment": "1 sentence describing the moment / what the SE did",
+      "quote": "The prospect's actual reaction (≤40 words)",
+      "category": "se_craft | specific_feature | integration_mockup | ease_of_use | pricing_packaging"
+    }}
+  ]
 }}
+
+ADDITIONAL EXTRACTION GUIDANCE for the new deal-anatomy fields:
+
+- **Buying committee:** include EVERY identifiable participant mentioned by name
+  or role, NOT just those who spoke heavily. If someone is referenced in
+  third-person ("our CFO will need to sign off"), include them with role
+  'finance' and `evidence` quoting that reference. Multiple people can share a
+  role — list each separately. Use the role names exactly as listed above.
+
+- **Primary users:** the team/people who will use this product day-to-day,
+  inferred from "we'd use this for X / our CSMs would do Y / our HR team
+  needs Z" type statements. Different from decision_maker (who buys) and
+  champion (who advocates internally).
+
+- **Incumbent:** almost always mentioned in discovery. Look for "we're using
+  X" / "we're moving off X" / "X has been our tool for..." etc. If the call
+  is for net-new (no incumbent), use `tool: "None / first vendor"`. If
+  genuinely not discussed, return all fields as null — don't guess.
+
+- **Discovery source:** how did they hear about us? Often comes up in
+  introductions ("we found you through...", "X referred us", "saw your
+  comparison on G2", "got an outbound email from..."). If not mentioned,
+  return source='unknown' with evidence describing what they said about
+  finding us if anything.
+
+- **Aha candidates:** 0-3 moments where the prospect expressed strong
+  positive reaction tied to something specific the SE did or showed. Look
+  for emotional language ("wow", "that's exactly what we need", "this is
+  the difference", "no other vendor did that"). The SE will pick the
+  definitive "aha that sealed it" later via the edit UI; you list the
+  candidates.
 
 CRITICAL distinction (re-read before answering):
 - `features_discussed` = capabilities ALREADY in our product that came up
