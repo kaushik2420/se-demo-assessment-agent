@@ -20,6 +20,8 @@ RUN pip install --no-cache-dir -r /tmp/core-requirements.txt
 COPY src/ ./src/
 COPY prompts/ ./prompts/
 COPY web/backend/ ./web/backend/
+# Initial-seed source for the changelog table (read once on first deploy)
+COPY POST_DEPLOYMENT_CHANGELOG.md ./POST_DEPLOYMENT_CHANGELOG.md
 
 WORKDIR /app/web/backend
 

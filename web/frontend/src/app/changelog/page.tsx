@@ -56,17 +56,41 @@ export default function ChangelogPage() {
       e.issue.toLowerCase().includes(search.toLowerCase()) ||
       e.fix.toLowerCase().includes(search.toLowerCase()));
 
-  async function downloadMarkdown() {
+  async function download(format: "md" | "docx") {
     const token = window.localStorage.getItem("se_coach_token");
-    const res = await fetch(`${API_BASE}/changelog/export.md`, {
+    const res = await fetch(`${API_BASE}/changelog/export.${format}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (!res.ok) { alert(`Download failed (${res.status})`); return; }
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `se-coach-changelog-${new Date().toISOString().slice(0,10)}.md`;
+    a.href = url;
+    a.download = `se-coach-changelog-${new Date().toISOString().slice(0,10)}.${format}`;
     document.body.appendChild(a); a.click(); a.remove();
     window.URL.revokeObjectURL(url);
+  }
+
+  async function reseed(wipe: boolean) {
+    const msg = wipe
+      ? "WIPE every existing entry and re-import the bundled snapshot? This loses any UI edits."
+      : "Top up missing entries from the bundled snapshot? (won't overwrite anything)";
+    if (!confirm(msg)) return;
+    try {
+      const res: any = await api(`/changelog/reseed${wipe ? "?wipe=true" : ""}`, { method: "POST" });
+      const lines = [
+        `Markdown found: ${res.markdown_found ? "yes" : "NO"}`,
+        `Existing before: ${res.existing_before}`,
+        `Wiped: ${res.wiped}`,
+        `Added: ${res.added}`,
+        `Skipped (already present): ${res.skipped_already_present}`,
+        res.errors?.length ? `Errors: ${res.errors.join("; ")}` : null,
+      ].filter(Boolean).join("\n");
+      alert(lines);
+      mutate();
+    } catch (e: any) {
+      alert(`Reseed failed: ${e?.message || e}`);
+    }
   }
 
   async function handleDelete(id: number, num: number) {
@@ -91,11 +115,32 @@ export default function ChangelogPage() {
               as markdown when you need to share.
             </p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={downloadMarkdown}
-              className="px-4 py-2 border border-ss-cyan-soft text-ss-navy rounded-lg text-sm hover:bg-ss-cream transition">
-              ⤓ Download (.md)
+          <div className="flex gap-2 items-center">
+            <button onClick={() => download("docx")}
+              className="px-4 py-2 border border-ss-cyan-soft text-ss-navy rounded-lg text-sm font-semibold hover:bg-ss-cream transition">
+              ⤓ Download .docx
             </button>
+            <button onClick={() => download("md")}
+              className="px-3 py-2 border border-ss-cyan-soft text-ss-navy-soft rounded-lg text-xs hover:bg-ss-cream transition">
+              .md
+            </button>
+            {canDelete && (
+              <details className="relative">
+                <summary className="px-3 py-2 border border-ss-cyan-soft text-ss-navy-soft rounded-lg text-xs hover:bg-ss-cream transition cursor-pointer list-none">⋯</summary>
+                <div className="absolute right-0 mt-1 bg-white border border-ss-cyan-soft rounded-lg shadow-lg z-10 w-72 p-2">
+                  <button onClick={() => reseed(false)}
+                    className="w-full text-left px-3 py-2 hover:bg-ss-cream rounded text-xs text-ss-navy">
+                    Top-up from bundled snapshot
+                    <div className="text-[10px] text-ss-navy-soft">Add missing entries without overwriting</div>
+                  </button>
+                  <button onClick={() => reseed(true)}
+                    className="w-full text-left px-3 py-2 hover:bg-red-50 rounded text-xs text-red-700 mt-1">
+                    Wipe + re-import all
+                    <div className="text-[10px] text-red-600">Destructive — loses any UI edits</div>
+                  </button>
+                </div>
+              </details>
+            )}
             <button onClick={() => setAdding(true)}
               className="px-4 py-2 bg-ss-navy text-white rounded-lg text-sm font-semibold hover:bg-ss-navy-dark transition">
               + Add entry

@@ -119,6 +119,103 @@ def list_entries(db: Session = Depends(get_db)):
     return [_to_item(r) for r in rows]
 
 
+@router.post("/reseed", dependencies=[Depends(require_role("admin"))])
+def reseed(wipe: bool = False):
+    """Admin rescue endpoint — re-import entries from the bundled markdown
+    snapshot. By default tops up only missing entries (won't overwrite anything
+    already in the DB). Pass `?wipe=true` to delete every row first, then
+    re-import — use this to fully reset to the snapshot state."""
+    from app.services.changelog_seeder import force_reseed
+    return force_reseed(wipe_existing=wipe)
+
+
+@router.get("/export.docx", dependencies=[Depends(require_role("admin", "manager"))])
+def export_docx(db: Session = Depends(get_db)):
+    """Download the entire changelog as a .docx file with proper formatting.
+    Rishul / leadership can attach this to email or paste into board decks."""
+    from docx import Document
+    from docx.shared import Pt, RGBColor, Inches
+    from io import BytesIO
+
+    rows = db.query(ChangelogEntry).order_by(desc(ChangelogEntry.entry_number)).all()
+
+    doc = Document()
+
+    # Title
+    t = doc.add_heading("SE Coach — Post-Deployment Change Log", level=0)
+    for run in t.runs:
+        run.font.color.rgb = RGBColor(0x25, 0x30, 0x43)  # ss-navy
+
+    p = doc.add_paragraph()
+    p.add_run("A running record of every bug, feedback item, and feature request raised by the team after the day-1 deployment.").italic = True
+
+    # Meta
+    meta = doc.add_paragraph()
+    meta_run = meta.add_run(
+        f"Exported: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}  ·  {len(rows)} entries"
+    )
+    meta_run.font.size = Pt(9)
+    meta_run.font.color.rgb = RGBColor(0x5A, 0x6B, 0x85)  # ss-navy-soft
+
+    doc.add_paragraph()  # spacer
+
+    for r in rows:
+        # Entry heading: "#34 — Title"
+        h = doc.add_heading(f"#{r.entry_number} — {r.title}", level=2)
+        for run in h.runs:
+            run.font.color.rgb = RGBColor(0x25, 0x30, 0x43)
+
+        # Status + Date line
+        meta_para = doc.add_paragraph()
+        status_run = meta_para.add_run(f"Status: {r.status or 'shipped'}")
+        status_run.bold = True
+        status_run.font.size = Pt(10)
+        date_str = r.entry_date.strftime("%Y-%m-%d") if r.entry_date else "—"
+        date_run = meta_para.add_run(f"     ·     Date: {date_str}")
+        date_run.font.size = Pt(10)
+        date_run.font.color.rgb = RGBColor(0x5A, 0x6B, 0x85)
+
+        # Issue
+        h = doc.add_paragraph()
+        run = h.add_run("Issue / Feedback:")
+        run.bold = True
+        run.font.color.rgb = RGBColor(0xB4, 0x53, 0x09)  # amber
+        doc.add_paragraph(r.issue)
+
+        # RCA
+        h = doc.add_paragraph()
+        run = h.add_run("RCA:")
+        run.bold = True
+        run.font.color.rgb = RGBColor(0xB4, 0x53, 0x09)
+        doc.add_paragraph(r.rca)
+
+        # Fix
+        h = doc.add_paragraph()
+        run = h.add_run("Fix:")
+        run.bold = True
+        run.font.color.rgb = RGBColor(0x1B, 0x7E, 0x47)  # emerald
+        doc.add_paragraph(r.fix)
+
+        # Separator
+        sep = doc.add_paragraph()
+        sep_run = sep.add_run("—" * 60)
+        sep_run.font.color.rgb = RGBColor(0xC8, 0xE8, 0xF2)  # cyan-soft
+        sep_run.font.size = Pt(8)
+
+    buf = BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="se-coach-changelog-{datetime.utcnow():%Y%m%d}.docx"',
+        },
+    )
+
+
 @router.get("/export.md", dependencies=[Depends(require_role("admin", "manager"))])
 def export_markdown(db: Session = Depends(get_db)):
     """Download the entire changelog as a markdown file. Same shape as the

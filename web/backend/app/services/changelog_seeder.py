@@ -20,9 +20,23 @@ from pathlib import Path
 from typing import Optional
 
 
-# Repo root: app/ → web/backend/ → web/ → repo
-_REPO_ROOT = Path(__file__).resolve().parents[4]
-MARKDOWN_PATH = _REPO_ROOT / "POST_DEPLOYMENT_CHANGELOG.md"
+# Try a handful of plausible locations for the markdown file. Render's Docker
+# build copies the file to /app/POST_DEPLOYMENT_CHANGELOG.md; locally it sits
+# at the repo root. We try both.
+def _find_markdown_path() -> Path | None:
+    candidates = [
+        Path("/app/POST_DEPLOYMENT_CHANGELOG.md"),
+        Path(__file__).resolve().parents[4] / "POST_DEPLOYMENT_CHANGELOG.md",
+        Path(__file__).resolve().parents[5] / "POST_DEPLOYMENT_CHANGELOG.md",
+        Path.cwd() / "POST_DEPLOYMENT_CHANGELOG.md",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+
+MARKDOWN_PATH = _find_markdown_path()
 
 
 _ENTRY_HEADER_RE = re.compile(
@@ -111,10 +125,16 @@ def parse_markdown(text: str) -> list[dict]:
     return entries
 
 
+def _read_markdown() -> str | None:
+    """Read the markdown content from disk if available."""
+    if MARKDOWN_PATH and MARKDOWN_PATH.exists():
+        return MARKDOWN_PATH.read_text(encoding="utf-8")
+    return None
+
+
 def seed_if_empty():
     """Populate the changelog table from the markdown file IF it's currently
-    empty. No-op once any entry exists (so future UI-added entries aren't
-    overwritten on subsequent deploys)."""
+    empty. No-op once any entry exists."""
     from app.db import SessionLocal
     from app.models import ChangelogEntry
 
@@ -125,15 +145,14 @@ def seed_if_empty():
             print(f"[changelog_seeder] skipping — {existing} entries already in DB")
             return
 
-        if not MARKDOWN_PATH.exists():
-            print(f"[changelog_seeder] skipping — {MARKDOWN_PATH} not found")
+        text = _read_markdown()
+        if not text:
+            print(f"[changelog_seeder] skipping — markdown file not found at any candidate path")
             return
 
-        text = MARKDOWN_PATH.read_text(encoding="utf-8")
         entries = parse_markdown(text)
-
         if not entries:
-            print(f"[changelog_seeder] parsed 0 entries from {MARKDOWN_PATH}; skipping seed")
+            print(f"[changelog_seeder] parsed 0 entries; skipping seed")
             return
 
         for e in entries:
@@ -154,3 +173,67 @@ def seed_if_empty():
         print(f"[changelog_seeder] error: {e}")
     finally:
         db.close()
+
+
+def force_reseed(wipe_existing: bool = False) -> dict:
+    """Admin-triggered re-import. Returns stats dict.
+
+    - If `wipe_existing=True`: deletes every row, then re-imports the markdown.
+      Use to overwrite the entire DB with the markdown's current state.
+    - If `wipe_existing=False`: imports only entries whose entry_number isn't
+      already in the DB. Use to top up missing entries without disturbing
+      anything already there (e.g. seed only happened partially before).
+    """
+    from app.db import SessionLocal
+    from app.models import ChangelogEntry
+
+    stats = {"existing_before": 0, "added": 0, "skipped_already_present": 0,
+             "wiped": 0, "markdown_found": False, "errors": []}
+
+    text = _read_markdown()
+    stats["markdown_found"] = bool(text)
+    if not text:
+        stats["errors"].append("Markdown source file not found at any candidate path")
+        return stats
+
+    entries = parse_markdown(text)
+    if not entries:
+        stats["errors"].append("Parsed 0 entries from markdown")
+        return stats
+
+    db = SessionLocal()
+    try:
+        stats["existing_before"] = db.query(ChangelogEntry).count()
+
+        if wipe_existing:
+            stats["wiped"] = db.query(ChangelogEntry).delete()
+            db.commit()
+
+        existing_numbers = {row[0] for row in db.query(ChangelogEntry.entry_number).all()}
+
+        for e in entries:
+            if e["entry_number"] in existing_numbers:
+                stats["skipped_already_present"] += 1
+                continue
+            try:
+                db.add(ChangelogEntry(
+                    entry_number=e["entry_number"],
+                    title=e["title"],
+                    issue=e["issue"],
+                    rca=e["rca"],
+                    fix=e["fix"],
+                    entry_date=e["entry_date"],
+                    status=e["status"],
+                    created_by="system (force reseed)",
+                ))
+                stats["added"] += 1
+            except Exception as ex:
+                stats["errors"].append(f"#{e['entry_number']}: {ex}")
+        db.commit()
+        print(f"[changelog_seeder] force_reseed done: {stats}")
+    except Exception as ex:
+        db.rollback()
+        stats["errors"].append(str(ex))
+    finally:
+        db.close()
+    return stats
