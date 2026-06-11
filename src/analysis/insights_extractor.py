@@ -109,7 +109,7 @@ def _mock_insights(ctx: CallContext) -> dict:
         "se_selling_style": {
             "feature_selling_share": 0.35,
             "value_selling_share": 0.65,
-            "verdict": "balanced",
+            "style": "balanced",
             "evidence": "SE tied dashboard demo to 'fewer surprise churns at renewal' — value framing",
         },
         "prospect_engagement": {

@@ -220,8 +220,23 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
                                `${f.feature}${f.urgency ? ` [${f.urgency}]` : ""}`).join(" · ")} />
               <Insight title={`Trial issues (${insights.trial_issues?.length || 0})`}
                        body={(insights.trial_issues || []).map((t: any) => t.issue).join(" · ") || "—"} />
-              <Insight title="SE selling style"
-                       body={`${insights.se_selling_style?.verdict} (${Math.round((insights.se_selling_style?.feature_selling_share || 0) * 100)}% features / ${Math.round((insights.se_selling_style?.value_selling_share || 0) * 100)}% value)`} />
+              <Insight title="Selling approach"
+                       body={(() => {
+                         const ss = insights.se_selling_style || {};
+                         // v6 'style' OR legacy 'verdict'; map old → new for display
+                         const raw = ss.style || ss.verdict || "";
+                         const LBL: Record<string, string> = {
+                           product_led: "Product-led",
+                           outcome_led: "Outcome-led",
+                           balanced: "Balanced",
+                           feature_seller: "Product-led",  // legacy
+                           value_seller: "Outcome-led",    // legacy
+                         };
+                         const label = LBL[raw] || (raw ? raw.replace(/_/g, " ") : "—");
+                         const fpct = Math.round((ss.feature_selling_share || 0) * 100);
+                         const vpct = Math.round((ss.value_selling_share || 0) * 100);
+                         return `${label} (${fpct}% product talk / ${vpct}% outcome talk)`;
+                       })()} />
               <Insight title="AE interruptions" body={`${insights.ae_behavior?.interruption_count ?? 0} times`} />
               <Insight title="Prospect engagement" body={insights.prospect_engagement?.sentiment} />
               <Insight title="Previous tool"

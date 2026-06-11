@@ -104,7 +104,7 @@ export default function ManagerPage() {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <Stat label="Team avg score" value={`${team_metrics.avg_score} / 5`} />
         <Stat label="Calls analyzed" value={team_metrics.calls} />
-        <Stat label="Feature-selling demos" value={`${Math.round(team_metrics.feature_selling_pct * 100)}%`} />
+        <Stat label="Product-led demos" value={`${Math.round(team_metrics.feature_selling_pct * 100)}%`} />
         <Stat label="AE quality flags" value={team_metrics.ae_quality_flags} />
       </div>
 

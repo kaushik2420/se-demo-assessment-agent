@@ -4,7 +4,7 @@ single demo transcript. Output is JSON so it can be aggregated into monthly
 dashboards and the CEO executive summary.
 """
 
-VERSION = "2026-06-v5"
+VERSION = "2026-06-v6"
 
 SYSTEM = """You are a deal-intelligence analyst. Read a sales-demo transcript and extract
 structured signals about the prospect's needs, the competitive context, and the
@@ -119,8 +119,8 @@ Return a JSON object with this exact shape:
   "se_selling_style": {{
     "feature_selling_share": 0.0-1.0,
     "value_selling_share":   0.0-1.0,
-    "verdict": "feature_seller | balanced | value_seller",
-    "evidence": "1 quote that proves the verdict"
+    "style": "product_led | balanced | outcome_led",
+    "evidence": "1 quote that proves the style"
   }},
   "prospect_engagement": {{
     "sentiment": "negative | neutral | curious | enthusiastic",

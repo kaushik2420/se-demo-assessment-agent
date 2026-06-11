@@ -259,7 +259,7 @@ function Content() {
             <tr><td><strong>P90</strong></td><td>4.3</td><td>Top 10% — leadership track. Trusted to demo to C-suite and run complex POCs.</td></tr>
             <tr><td><strong>P75</strong></td><td>3.9</td><td>Top 25% — strong, consistent performer. Trusted with the biggest deals.</td></tr>
             <tr><td><strong>P50</strong></td><td>3.4</td><td><strong>Median.</strong> The "typical" B2B SaaS SE. Solid but not yet differentiated.</td></tr>
-            <tr><td><strong>P25</strong></td><td>2.8</td><td>Bottom 25% — needs structured coaching. Usually weak discovery / feature-selling.</td></tr>
+            <tr><td><strong>P25</strong></td><td>2.8</td><td>Bottom 25% — needs structured coaching. Often heavy on product walkthrough without tying back to stated outcomes.</td></tr>
             <tr><td><strong>P10</strong></td><td>&lt; 2.8</td><td>Bottom 10% — likely doing feature tours instead of value-led demos.</td></tr>
           </tbody>
         </table>
@@ -467,7 +467,7 @@ function Content() {
             <tr><td><strong>Trial issues</strong></td><td>Things that broke or were confusing during a trial, with severity.</td></tr>
             <tr><td><strong>Loss-risk signals</strong></td><td>No-reference-customer asks, support quality concerns, pricing pushback, product-gap concerns.</td></tr>
             <tr><td><strong>AE behavior</strong></td><td>How many times the AE interrupted the SE mid-value, plus an impact verdict.</td></tr>
-            <tr><td><strong>SE selling style</strong></td><td>Feature-selling vs value-selling split — same audio, just measuring framing.</td></tr>
+            <tr><td><strong>Selling approach</strong></td><td>Product-led vs outcome-led vs balanced — describes the approach the call lent itself to, not a label on the SE. The metric reflects framing on this specific call, not a permanent style.</td></tr>
             <tr><td><strong>Prospect engagement</strong></td><td>Overall sentiment, buying signals, objections.</td></tr>
           </tbody>
         </table>

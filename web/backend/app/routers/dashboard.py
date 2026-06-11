@@ -134,8 +134,14 @@ def manager_dashboard(db: Session = Depends(get_db)):
 
     all_calls = db.query(Call).filter(Call.scorecard.has()).all()
     all_insights = [c.insights.data for c in all_calls if c.insights]
-    feature_selling_pct = (sum(1 for i in all_insights
-                               if i.get("se_selling_style", {}).get("verdict") == "feature_seller")
+    # Selling-style framing was softened in v6: "feature_seller" → "product_led",
+    # "value_seller" → "outcome_led". Accept both the new and legacy values so
+    # mixed v5 + v6 data renders the same metric.
+    def _is_product_led(ins: dict) -> bool:
+        s = ins.get("se_selling_style", {}) or {}
+        v = s.get("style") or s.get("verdict")  # 'style' new, 'verdict' legacy
+        return v in ("product_led", "feature_seller")
+    feature_selling_pct = (sum(1 for i in all_insights if _is_product_led(i))
                            / max(len(all_insights), 1))
     return {
         "demo_of_the_month": dotm,
@@ -485,17 +491,25 @@ def ceo_dashboard(db: Session = Depends(get_db)):
         if fr.get("urgency") == "blocker":
             blocker_features[fr.get("feature", "?")] += 1
 
+    # v6: accept both new 'style' field with 'product_led' value and legacy
+    # 'verdict' field with 'feature_seller' value.
+    def _is_product_led(ins: dict) -> bool:
+        s = ins.get("se_selling_style", {}) or {}
+        v = s.get("style") or s.get("verdict")
+        return v in ("product_led", "feature_seller")
+
+    product_led_count = sum(1 for i in insights if _is_product_led(i))
+    product_led_pct = round(product_led_count / max(len(insights), 1), 2)
     return {
         "month": this_month,
         "headline": f"{len(calls)} calls analyzed. "
-                    f"{int(100*sum(1 for i in insights if i.get('se_selling_style',{}).get('verdict')=='feature_seller')/max(len(insights),1))}% "
-                    f"of demos slipped into feature-selling.",
+                    f"{int(100 * product_led_pct)}% "
+                    f"of demos leaned product-led (vs outcome-led).",
         "month_metrics": {
             "calls": len(calls),
             "ae_interruption_avg_per_call": round(mean(ae_interruption), 1) if ae_interruption else 0,
-            "feature_selling_pct": round(sum(1 for i in insights
-                                             if i.get("se_selling_style",{}).get("verdict")=="feature_seller")
-                                         / max(len(insights), 1), 2),
+            "feature_selling_pct": product_led_pct,  # legacy key, new semantics
+            "product_led_pct": product_led_pct,
         },
         "top_product_blockers": [{"feature": f, "deal_count": n}
                                  for f, n in blocker_features.most_common(5)],

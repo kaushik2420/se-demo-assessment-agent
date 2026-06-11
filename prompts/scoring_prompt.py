@@ -44,8 +44,11 @@ Scoring rules:
   estimate AND flag `low_confidence: true`. Reserve `not_assessable: true` for
   visual sub-criteria with zero verbal evidence — the framework excludes those
   from the weighted average rather than penalizing.
-- Never reward feature-selling. A demo that lists capabilities without tying them to
-  the prospect's stated pain caps out at 2.5 on 'Solution-Focused' and 'Customization'.
+- Never reward purely product-led selling. A demo that lists capabilities without
+  tying them to the prospect's stated pain caps out at 2.5 on 'Solution-Focused'
+  and 'Customization'. (We describe approaches as product-led vs outcome-led —
+  product-led isn't categorically bad, but uncalibrated product-led on a value-
+  buying audience is.)
 
 WHAT NOT TO PENALIZE — these are common mis-classifications you must avoid:
 
