@@ -26,6 +26,7 @@ export function TopNav() {
     { href: "/community", label: "Community",    roles: ["se", "manager", "ceo", "admin"] },
     { href: "/tracker",   label: "Tracker",      roles: ["se", "manager", "ceo", "admin"] },
     { href: "/team",      label: "Team",         roles: ["manager", "admin"] },
+    { href: "/changelog", label: "Changelog",    roles: ["manager", "admin"] },
   ].filter((t) => t.roles.includes(me.role));
 
   return (

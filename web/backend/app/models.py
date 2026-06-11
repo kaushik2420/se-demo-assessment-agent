@@ -144,6 +144,29 @@ class TrackerRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class ChangelogEntry(Base):
+    """Post-deployment change log — issue / RCA / fix / date format.
+
+    Admin + manager only. Created via UI or seeded from markdown on first
+    deploy. Replaces the external Google Doc dependency so we own the
+    source of truth and can download/share without API hassle.
+    """
+    __tablename__ = "changelog_entries"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entry_number: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    issue: Mapped[str] = mapped_column(Text, nullable=False)        # "Issue / Feedback" section
+    rca: Mapped[str] = mapped_column(Text, nullable=False)          # "RCA" section
+    fix: Mapped[str] = mapped_column(Text, nullable=False)          # "Fix" section
+    entry_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))  # the "Date" field
+    status: Mapped[str] = mapped_column(String(16), default="shipped")  # shipped | pending | blocked | deferred
+    created_by: Mapped[Optional[str]] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    updated_by: Mapped[Optional[str]] = mapped_column(String(255))
+
+
 class CoachingAction(Base):
     __tablename__ = "coaching_actions"
 

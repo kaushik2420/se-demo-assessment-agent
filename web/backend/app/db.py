@@ -123,3 +123,12 @@ def init_db():
             conn.commit()
         except Exception as e:
             print(f"[init_db] non-fatal: {e}")
+
+    # Seed the changelog table from the markdown file on first deploy.
+    # Idempotent — only runs if the table is empty. Outside the connect
+    # block above because the seeder opens its own session.
+    try:
+        from app.services.changelog_seeder import seed_if_empty
+        seed_if_empty()
+    except Exception as e:
+        print(f"[init_db] changelog seed non-fatal: {e}")
