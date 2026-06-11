@@ -11,7 +11,7 @@ A running record of every bug, feedback item, and feature request raised by the 
 
 Day-1 deployment: **2026-05-27** (initial build) — first team-facing usage began **2026-05-31** when the Granola Business integration was switched on.
 
-Last updated: **2026-06-05** (latest entry #33)
+Last updated: **2026-06-05** (latest entry #34)
 
 ---
 
@@ -588,6 +588,46 @@ Polling automatically stops once the scorecard arrives OR the row is marked fail
 - Real HubSpot connector via OAuth, syncing deal value + stage + close date + amount currency hourly.
 - Per-currency aggregations on the BU panels (separate totals per currency code) once we have HubSpot's currency on each deal.
 - ACV-weighted feature-gap and loss-risk panels (currently still deal-count weighted).
+
+**Date:** 2026-06-05
+
+---
+
+## #34 — Round-2 SE feedback (Parul, ChangChen + SlashRTC calls): pricing mis-attribution, missed use-case pivot, hybrid-call penalty, blunt strengths/gaps, percentile granularity
+
+**Issue / Feedback:** Parul reviewed two of her calls (ChangChen and SlashRTC) and flagged five distinct problems:
+
+1. "Pricing was owned by Sriram (AE), so the analysis should not attribute that section to me."
+2. "The call context changed during discovery on call. This was a partnership use case, not internal usage."
+3. "The prospect requested a full product walkthrough, and the demo continued with Ujjwal (AE) covering SurveySparrow. Because of this, the call did not have a clean next-step close."
+4. "The point listed as a 'pro' for showcasing the product internally can also be interpreted as a 'con' depending on the context."
+5. "The score is greater than 3, but the call is still being categorized as P10."
+
+**RCA per item:**
+
+1. **Speaker attribution.** Granola labels SE turns by name and lumps everyone else into "Speaker:" turns. The scoring prompt didn't explicitly tell Claude *not* to attribute "Speaker:" content (especially pricing, owned by the AE) to the SE — so Claude was writing strengths/gaps about pricing handling even when the SE never spoke on the topic.
+
+2. **Use case evolution.** Insights prompt asked for "1-2 sentence description of what the prospect wants to do" — Claude grabbed the *opening* framing and didn't update when the framing pivoted during discovery. Calls that change direction mid-conversation got mis-summarized.
+
+3. **Hybrid call structure.** The call was framed as discovery but the prospect asked for a walkthrough, so it extended into demo territory. The scoring prompt dings a discovery call for lacking a clean discovery next-step — but if the call STRUCTURALLY became a demo, that penalty is unfair.
+
+4. **Strengths/gaps lacked nuance.** Claude framed context-dependent behaviours as absolute strengths/gaps. Example: "Showed internal-facing dashboards in the first 5 min" is great or bad depending on what the buying committee is evaluating — but Claude wrote it as one or the other.
+
+5. **Percentile bands too coarse.** The `percentile_of()` function was a 5-band step function: any score between 2.8 (P25) and 3.39 (P50) returned 25. Parul's feedback wasn't *literally* P10 with a 3+ score (the function couldn't return that), but the misleading "P25 for any score in a wide band" was real and felt wrong.
+
+**Fix (shipped — scoring v4, insights v5):**
+
+1. **Speaker attribution rule #5** added to scoring prompt: "Only score the SE on what the SE actually said. When pricing/contract content appears in 'Speaker:' turns and an AE is on the attendee list, assume the AE — don't write strengths/gaps about how the SE handled pricing if their name isn't on those turns."
+
+2. **Use case evolution capture** in insights prompt: `use_case.summary` now requires the FINAL framing (what the prospect landed on by the end of the call). New `use_case.evolved: bool` + `use_case.evolution_note` fields capture pivots. Calls like ChangChen will now say "Partnership use case (evolved from initial internal-usage framing)" instead of just "internal usage."
+
+3. **Hybrid call structure rule #6** added to scoring prompt: "If the prospect asked for a different structure mid-call (e.g., discovery extended into demo), score the SE on the FINAL structure of what actually happened. Don't penalize for missing the original call type's expected close if the call structurally became something else."
+
+4. **Strengths/gaps nuance rule #7** added to scoring prompt: "When citing a strength or gap, note context if the same behaviour could be valid OR invalid depending on situation. Frame context-dependent observations as conditional, not absolute."
+
+5. **Percentile via linear interpolation** in `benchmarks.py::percentile_of()`. Instead of 5 coarse bands, the function now interpolates between anchor points (P25=2.8, P50=3.4, P75=3.9, P90=4.3, P95=4.5, plus floor/ceiling). Worked examples in the docstring: 3.0→P33, 3.1→P37, 3.25→P44, 3.4→P50, 4.0→P78. Parul's "3+ feels like more than P25" intuition now matches what the system shows.
+
+**Recommended action after deploy:** kaushik triggers the admin "Re-analyze under current prompts" job (Team page → outdated mode) so Parul's ChangChen + SlashRTC calls (and everyone else's v3 calls) get re-scored under v4/v5. The five issues she flagged should resolve in the re-analyzed output.
 
 **Date:** 2026-06-05
 

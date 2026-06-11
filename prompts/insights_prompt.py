@@ -4,7 +4,7 @@ single demo transcript. Output is JSON so it can be aggregated into monthly
 dashboards and the CEO executive summary.
 """
 
-VERSION = "2026-06-v4"
+VERSION = "2026-06-v5"
 
 SYSTEM = """You are a deal-intelligence analyst. Read a sales-demo transcript and extract
 structured signals about the prospect's needs, the competitive context, and the
@@ -77,8 +77,10 @@ Return a JSON object with this exact shape:
     "evidence": "1-2 quotes that grounded the product determination"
   }},
   "use_case": {{
-    "summary": "1-2 sentence description of what the prospect wants to do",
-    "explicit_quotes": ["...", "..."]
+    "summary": "1-2 sentence description of what the prospect ULTIMATELY wants to do — i.e. the framing they LANDED ON by the end of the call, not their opening framing if it changed",
+    "evolved": true|false,
+    "evolution_note": "If the use case shifted during the call (e.g. opened as 'internal usage' but turned into 'partnership use case', or started as one product line and pivoted to another), 1 sentence describing the shift. Empty string if it stayed consistent.",
+    "explicit_quotes": ["1-3 direct quotes that ground the FINAL framing"]
   }},
   "maturity": {{
     "scope": "CX | EX",

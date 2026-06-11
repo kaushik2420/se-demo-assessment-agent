@@ -48,6 +48,8 @@ def _mock_insights(ctx: CallContext) -> dict:
             ) if high_maturity else (
                 "Prospect wants a one-off post-event satisfaction form with CSV export."
             ),
+            "evolved": False,
+            "evolution_note": "",
             "explicit_quotes": [
                 f"We need to know which accounts are at risk before renewal" if high_maturity
                 else "We just need a form for our annual user conference",
