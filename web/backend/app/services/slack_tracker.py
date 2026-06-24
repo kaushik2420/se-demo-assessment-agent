@@ -466,10 +466,16 @@ def _format_reminder_message(row: TrackerRequest, days_stale: int,
     )
 
 
-def check_staleness_and_remind() -> dict:
+def check_staleness_and_remind(force_ignore_cooldown: bool = False) -> dict:
     """Find open tracker rows untouched > STALENESS_DAYS and post a per-row
-    structured reminder to SLACK_TRACKER_CHANNEL_ID. Cooldown prevents
-    re-reminding the same row within REMINDER_COOLDOWN_DAYS."""
+    structured reminder to SLACK_TRACKER_CHANNEL_ID.
+
+    By default the 3-day cooldown is enforced (a row reminded in the last
+    72h is skipped). Pass `force_ignore_cooldown=True` to re-remind every
+    stale row regardless of when it was last reminded — used by the admin
+    "Send reminders now" button so you can re-validate the message format
+    or re-ping the channel deliberately. The 09:00 UTC scheduled cron
+    always uses the default (cooldown enforced) so it doesn't spam."""
     if not os.getenv("SLACK_BOT_TOKEN"):
         return {"ok": False, "reason": "SLACK_BOT_TOKEN not set"}
     if not SLACK_TRACKER_CHANNEL_ID:
@@ -485,6 +491,7 @@ def check_staleness_and_remind() -> dict:
         "checked": 0, "reminded": 0, "skipped_cooldown": 0,
         "channel_id": SLACK_TRACKER_CHANNEL_ID,
         "threshold_days": STALENESS_DAYS,
+        "force_ignore_cooldown": force_ignore_cooldown,
         "se_tagged": 0,
         "se_not_in_slack": 0,
         "errors": [],
@@ -530,7 +537,7 @@ def check_staleness_and_remind() -> dict:
             return uid
 
         for row in rows:
-            if row.reminder_sent_at and row.reminder_sent_at > cooldown:
+            if not force_ignore_cooldown and row.reminder_sent_at and row.reminder_sent_at > cooldown:
                 stats["skipped_cooldown"] += 1
                 continue
             try:

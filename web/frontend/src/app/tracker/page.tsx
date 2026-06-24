@@ -486,7 +486,12 @@ function StalenessRunCard() {
   const [result, setResult] = useState<any>(null);
 
   async function run() {
-    if (!confirm("Send stale-ticket reminders to Slack now? (open rows untouched 7+ days)")) return;
+    if (!confirm(
+      "Send stale-ticket reminders to Slack now?\n\n" +
+      "This will RE-REMIND every open ticket stale 7+ days — bypassing the 3-day cooldown. " +
+      "If you click this 10 times, the channel will get 10 sets of reminders.\n\n" +
+      "(The daily 09:00 UTC cron still respects cooldown — only this manual button forces.)"
+    )) return;
     setRunning(true); setResult(null);
     try {
       const r = await api<any>("/tracker/staleness/run-now", { method: "POST" });
@@ -502,9 +507,10 @@ function StalenessRunCard() {
         <div className="flex-1">
           <h2 className="font-semibold text-ss-navy mb-1">Stale-ticket reminders → Slack channel</h2>
           <p className="text-xs text-ss-navy-soft">
-            Runs daily at 09:00 UTC by default. Click to trigger immediately — posts one structured
-            message per open ticket untouched for 7+ days to the configured Slack channel.
-            Cooldown rule still applies: a ticket reminded in the last 3 days is skipped.
+            Runs daily at 09:00 UTC by default (cooldown enforced — won't re-ping a ticket reminded in
+            the last 3 days). <strong className="text-ss-navy">Clicking this button bypasses the
+            cooldown</strong> — every stale ticket gets re-reminded immediately. Useful for validating
+            format changes or deliberate re-pings. Admin-only.
           </p>
         </div>
         <button onClick={run} disabled={running}
@@ -532,6 +538,11 @@ function StalenessRunCard() {
             <div>
               <div className="font-semibold text-ss-navy mb-1">
                 Done · {result.reminded ?? 0} reminders sent
+                {result.force_ignore_cooldown && (
+                  <span className="ml-2 px-1.5 py-0.5 text-[10px] font-semibold rounded uppercase tracking-wide bg-amber-100 text-amber-800">
+                    cooldown bypassed
+                  </span>
+                )}
               </div>
               <div>
                 Checked: {result.checked ?? 0} stale row{result.checked === 1 ? "" : "s"} (≥{result.threshold_days ?? 7}d untouched)

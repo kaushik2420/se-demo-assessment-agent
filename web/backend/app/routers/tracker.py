@@ -147,10 +147,14 @@ def list_ses(
 def staleness_run_now():
     """Trigger the staleness reminder cron immediately. Posts one structured
     message per stale row to SLACK_TRACKER_CHANNEL_ID and returns stats.
-    Useful for retrospective runs (e.g. catching up after a format change)
-    without waiting until 09:00 UTC."""
+
+    Cooldown bypass: this endpoint ALWAYS forces re-reminding every stale
+    row, ignoring the 3-day cooldown. Admin-only and the only way to bypass
+    cooldown — the 09:00 UTC scheduled cron continues to respect it. Useful
+    for validating message format changes, catching up after deploys, or
+    deliberately re-pinging the channel."""
     from app.services.slack_tracker import check_staleness_and_remind
-    result = check_staleness_and_remind()
+    result = check_staleness_and_remind(force_ignore_cooldown=True)
     print(f"[tracker.stale.manual] result: {result}")
     return result
 
