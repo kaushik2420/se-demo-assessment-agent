@@ -57,7 +57,9 @@ function productClass(p: string | null): string {
 
 function kindClass(k: string | null): string {
   if (!k) return "bg-slate-100 text-slate-600";
-  return k === "issue" ? "bg-rose-100 text-rose-800" : "bg-sky-100 text-sky-800";
+  if (k === "issue")       return "bg-rose-100 text-rose-800";
+  if (k === "enhancement") return "bg-violet-100 text-violet-800";
+  return "bg-sky-100 text-sky-800";  // request
 }
 
 export default function TrackerPage() {
@@ -412,7 +414,8 @@ function EditForm({
             className="w-full px-3 py-2 border border-ss-cyan-soft rounded bg-white outline-none focus:ring-2 focus:ring-ss-teal">
             <option value="">— Unknown —</option>
             <option value="issue">Issue (bug / broken)</option>
-            <option value="request">Request (new / enhancement)</option>
+            <option value="request">Request (net-new functionality)</option>
+            <option value="enhancement">Enhancement (improvement to existing)</option>
           </select>
         </div>
         <div>

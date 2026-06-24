@@ -81,8 +81,14 @@ def _classify_product_heuristic(text: str) -> Optional[str]:
     return None
 
 
-STALENESS_DAYS = 15
-REMINDER_COOLDOWN_DAYS = 7   # don't re-remind the same row within this window
+STALENESS_DAYS = 7           # remind once a row has been untouched this long
+REMINDER_COOLDOWN_DAYS = 3   # don't re-remind the same row within this window
+
+# Channel destination for staleness reminders (Slack channel ID, e.g. C0123456).
+# When set, the daily cron posts a per-row reminder there instead of DMing the
+# SE. The bot must be invited to the channel — Slack will return 'not_in_channel'
+# otherwise and we'll log it loudly so you can fix it once.
+SLACK_TRACKER_CHANNEL_ID = os.getenv("SLACK_TRACKER_CHANNEL_ID", "").strip()
 
 # Admin gets a DM on every @SE Coach tag with the outcome (✅ or ❌).
 # Useful while we're debugging — set to empty string to disable.
@@ -406,60 +412,104 @@ def refresh_open_threads() -> dict:
 # Staleness reminder cron
 # -------------------------------------------------------------------------
 
+def _kind_label(kind: Optional[str]) -> str:
+    """Format the kind field for display. Maps the enum to readable text."""
+    if not kind:
+        return "—"
+    return {
+        "issue": "Issue",
+        "request": "Request",
+        "enhancement": "Enhancement",
+    }.get(kind.lower(), kind.title())
+
+
+def _format_reminder_message(row: TrackerRequest, days_stale: int) -> str:
+    """Build the structured 10-field stale-ticket message in Slack mrkdwn."""
+    raised = row.requested_date.strftime("%Y-%m-%d") if row.requested_date else "—"
+    eta = row.eta.strftime("%Y-%m-%d") if row.eta else "—"
+    last_upd = row.last_updated_at.strftime("%Y-%m-%d") if row.last_updated_at else "—"
+    slack_url = row.slack_url or "—"
+    l2 = row.l2_url or "—"
+    jira = row.jira_url or "—"
+    engineer = row.engineer_name or "—"
+    se_name = row.se_name or "—"
+    details = (row.details or "—").strip()
+
+    # Slack hides URLs from "<...>" wrappers and renders them as link previews;
+    # for the URL fields we want them visible AND clickable, so we leave them
+    # bare for the simple "—" case and use the <url|text> form when set.
+    def _link_or_dash(url: str | None, text: str = "open") -> str:
+        return f"<{url}|{text}>" if url and url != "—" else "—"
+
+    return (
+        f":hourglass_flowing_sand: *Stale tracker ticket — no update in {days_stale} days*\n\n"
+        f"*1. SE Name:* {se_name}\n"
+        f"*2. Ticket raised date:* {raised}\n"
+        f"*3. Slack channel URL:* {_link_or_dash(row.slack_url, 'open thread')}\n"
+        f"*4. Description of the ticket:* {details}\n"
+        f"*5. ETA:* {eta}\n"
+        f"*6. L2 link:* {_link_or_dash(row.l2_url, 'L2 ticket')}\n"
+        f"*7. Jira:* {_link_or_dash(row.jira_url, 'Jira issue')}\n"
+        f"*8. Engineer / Product POC:* {engineer}\n"
+        f"*9. Last update date:* {last_upd}\n"
+        f"*10. Type:* {_kind_label(row.kind)}"
+    )
+
+
 def check_staleness_and_remind() -> dict:
-    """Find open tracker rows untouched >15 days and DM their SE in Slack."""
+    """Find open tracker rows untouched > STALENESS_DAYS and post a per-row
+    structured reminder to SLACK_TRACKER_CHANNEL_ID. Cooldown prevents
+    re-reminding the same row within REMINDER_COOLDOWN_DAYS."""
     if not os.getenv("SLACK_BOT_TOKEN"):
         return {"ok": False, "reason": "SLACK_BOT_TOKEN not set"}
+    if not SLACK_TRACKER_CHANNEL_ID:
+        return {"ok": False,
+                "reason": "SLACK_TRACKER_CHANNEL_ID env var not set — "
+                          "configure it in Render and invite the bot to that channel"}
 
     now = datetime.now(timezone.utc)
     threshold = now - timedelta(days=STALENESS_DAYS)
     cooldown = now - timedelta(days=REMINDER_COOLDOWN_DAYS)
 
-    stats = {"checked": 0, "reminded": 0, "errors": []}
+    stats: dict = {
+        "checked": 0, "reminded": 0, "skipped_cooldown": 0,
+        "channel_id": SLACK_TRACKER_CHANNEL_ID,
+        "threshold_days": STALENESS_DAYS,
+        "errors": [],
+    }
     db = SessionLocal()
     try:
         rows = (db.query(TrackerRequest)
                 .filter(TrackerRequest.status == "open")
                 .filter(TrackerRequest.last_updated_at < threshold)
+                .order_by(TrackerRequest.last_updated_at)  # oldest first
                 .all())
         stats["checked"] = len(rows)
 
         slack = SlackClient()
         for row in rows:
             if row.reminder_sent_at and row.reminder_sent_at > cooldown:
+                stats["skipped_cooldown"] += 1
                 continue
-            if not row.se_email:
-                continue
-            # Find the slack user id by email
-            user = db.query(User).filter(User.email == row.se_email).first()
-            if not user:
-                continue
-            # Look up the slack user id via email — Slack doesn't have a direct
-            # 'lookupByEmail' here without users:read.email; if we have one, use it.
             try:
-                import requests as _req
-                r = _req.get(f"https://slack.com/api/users.lookupByEmail",
-                             headers={"Authorization": f"Bearer {os.getenv('SLACK_BOT_TOKEN')}"},
-                             params={"email": row.se_email}, timeout=10)
-                user_id = r.json().get("user", {}).get("id") if r.ok else None
-                if not user_id:
-                    continue
-                dm_channel = slack.open_dm(user_id)
                 days_stale = (now - row.last_updated_at).days
-                text = (
-                    f":wave: This SE-Coach tracker item hasn't had an update in *{days_stale} days*.\n"
-                    f"> *Request:* {row.details or '(no details)'}\n"
-                    f"> *Engineer:* {row.engineer_name or 'unknown'}\n"
-                    f"> *ETA:* {row.eta.strftime('%Y-%m-%d') if row.eta else 'not set'}\n"
-                    f"> *Thread:* {row.slack_url or 'n/a'}\n\n"
-                    f"Want me to update it? Tag *@SE Coach* again in the thread with the latest status."
-                )
-                slack.post_message(dm_channel, text)
+                text = _format_reminder_message(row, days_stale)
+                slack.post_message(SLACK_TRACKER_CHANNEL_ID, text)
                 row.reminder_sent_at = now
                 db.commit()
                 stats["reminded"] += 1
+                print(f"[tracker.stale] reminded row #{row.id} ({days_stale}d stale) → "
+                      f"channel {SLACK_TRACKER_CHANNEL_ID}")
             except Exception as e:
-                stats["errors"].append(f"row {row.id}: {e}")
+                db.rollback()
+                err_msg = str(e)
+                stats["errors"].append(f"row {row.id}: {err_msg}")
+                print(f"[tracker.stale] row #{row.id} failed: {err_msg}")
+                # Common failure mode: bot not in channel. Log a clear hint
+                # once per run so kaushik can fix it.
+                if "not_in_channel" in err_msg:
+                    print(f"[tracker.stale] FIX: invite the bot to channel "
+                          f"{SLACK_TRACKER_CHANNEL_ID} — `/invite @SE Coach`")
     finally:
         db.close()
     return stats
@@ -518,7 +568,7 @@ Return ONLY this JSON:
   "eta": "YYYY-MM-DD" or null (any committed completion date discussed; null if not),
   "engineer_name": "Full name of the engineer/PM responsible for fulfilling this request" or null,
   "details": "1-3 sentence summary of what the SE is asking for",
-  "kind": "issue" | "request" | null  (use "issue" for bugs / broken behavior / something that USED to work, "request" for new features / enhancements / new asks. null if you genuinely can't tell.),
+  "kind": "issue" | "request" | "enhancement" | null  (use "issue" for bugs / broken behavior / something that USED to work; "request" for net-new functionality the prospect needs us to build; "enhancement" for improvements to existing functionality (faster, cleaner, more configurable, missing edge case); null if you genuinely can't tell.),
   "product": "SurveySparrow" | "ThriveSparrow" | "SparrowDesk" | "Unknown"  (which product is the conversation about — see definitions above),
   "l2_url": "https://...zendesk.com/..." or null  (any Zendesk / L2 support ticket link mentioned in the thread),
   "jira_url": "https://...atlassian.net/browse/PROJ-123" or null  (any Jira issue link mentioned),

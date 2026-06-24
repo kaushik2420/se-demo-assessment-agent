@@ -11,7 +11,7 @@ A running record of every bug, feedback item, and feature request raised by the 
 
 Day-1 deployment: **2026-05-27** (initial build) — first team-facing usage began **2026-05-31** when the Granola Business integration was switched on.
 
-Last updated: **2026-06-05** (latest entry #34)
+Last updated: **2026-06-05** (latest entry #37)
 
 ---
 
@@ -628,6 +628,55 @@ Polling automatically stops once the scorecard arrives OR the row is marked fail
 5. **Percentile via linear interpolation** in `benchmarks.py::percentile_of()`. Instead of 5 coarse bands, the function now interpolates between anchor points (P25=2.8, P50=3.4, P75=3.9, P90=4.3, P95=4.5, plus floor/ceiling). Worked examples in the docstring: 3.0→P33, 3.1→P37, 3.25→P44, 3.4→P50, 4.0→P78. Parul's "3+ feels like more than P25" intuition now matches what the system shows.
 
 **Recommended action after deploy:** kaushik triggers the admin "Re-analyze under current prompts" job (Team page → outdated mode) so Parul's ChangChen + SlashRTC calls (and everyone else's v3 calls) get re-scored under v4/v5. The five issues she flagged should resolve in the re-analyzed output.
+
+**Date:** 2026-06-05
+
+---
+
+## #35 — Move changelog from external Google Doc into SE Coach itself
+
+**Issue / Feedback:** Kaushik asked: "what is the best solution to maintain all of this in a running doc? Can you create a page inside SE Coach itself where we maintain these logs so we don't have to worry about any API as it will be in our control and just give access to me and Sushmitha and provide us with an download option so we can download and share it with everyone as and when required."
+
+**RCA:** The Google Doc approach had three problems: (1) the Drive API I was using couldn't update an existing doc in place — each sync required creating a new doc with a new URL, (2) external API dependency meant the doc could drift out of sync with the actual changes shipped, (3) no auth/role control over who could read or edit.
+
+**Fix:** Built `/changelog` page native to SE Coach. New `ChangelogEntry` model with `entry_number`, `title`, `issue`, `rca`, `fix`, `status`, `entry_date`, and audit columns. New router `app/routers/changelog.py` with CRUD endpoints (admin + manager only; delete restricted to admin for audit-trail discipline). Frontend page at `/changelog` with collapsible entry cards, status filter, full-text search, add/edit modal with validation, markdown download button. TopNav entry added for admin + manager. First-time seeder reads `POST_DEPLOYMENT_CHANGELOG.md` from disk and bulk-imports all existing entries — runs only on empty table so subsequent UI edits aren't overwritten.
+
+**Date:** 2026-06-05
+
+---
+
+## #36 — Changelog page was empty after first deploy + add .docx export
+
+**Issue / Feedback:** Kaushik opened `/changelog` after the new feature deployed and it was empty. He also asked for `.docx` download format alongside markdown — *"else it's of no use"* — because the team needs to attach the changelog to leadership emails / board decks.
+
+**RCA:** The Dockerfile copied `src/`, `prompts/`, and `web/backend/` into the container but NOT `POST_DEPLOYMENT_CHANGELOG.md` (which lives at the repo root). The seeder ran on first deploy, looked for the markdown at the expected path, didn't find it, and quietly exited with zero rows inserted — exactly the behavior of an empty page. Markdown was the only export format.
+
+**Fix:** Three layered fixes so this can't recur:
+1. **Dockerfile updated** to `COPY POST_DEPLOYMENT_CHANGELOG.md ./POST_DEPLOYMENT_CHANGELOG.md` — markdown is now bundled in the image.
+2. **Seeder hardened** to try multiple candidate paths (`/app/...`, several relative locations, CWD) — works regardless of how the container is laid out.
+3. **Admin rescue endpoint** `POST /changelog/reseed` with two modes: top-up (adds entries whose number isn't already in the DB, never overwrites) or wipe-and-reimport (full reset to the bundled snapshot). UI surfaces these behind a `⋯` menu (admin only).
+
+Added `.docx` export via `python-docx`: heading-2 per entry, status/date meta line, color-coded section labels (amber for Issue/RCA, emerald for Fix), proper separators between entries. Clean format for Word, Google Docs, Pages — attach to email or paste into slides without reformatting. Both `.docx` (primary button) and `.md` (secondary) surface on the page header.
+
+**Date:** 2026-06-05
+
+---
+
+## #37 — Soften selling-style labels (feature_seller → product_led) so SEs aren't labeled as a "type of person"
+
+**Issue / Feedback:** An SE flagged that the labels `feature_seller`, `balanced`, `value_seller` on their scorecard felt judgmental — *"like some SEs might be a bit sensitive when they look at these terms."* The "-seller" suffix turns an approach used on one call into what feels like a verdict on the person.
+
+**RCA:** Original labels were prescriptive ("good vs bad seller"). Feature-emphasis on the wrong audience is the problem, not "being a feature seller." The labels collapsed nuance: a technical evaluator might NEED a product-led approach; the same approach with a value-buying audience is uncalibrated. The framing also imported a sales-trope value judgment into a coaching tool — counterproductive for development.
+
+**Fix:** Insights prompt v6 — `verdict` field renamed to `style`, values changed to `product_led | balanced | outcome_led`. "Style" replaces "verdict" because verdict reads courtroom-like; "product-led / outcome-led" describes the approach (the method), not the seller (the person).
+
+- Display strings rewritten: call detail page now reads "Selling approach: Product-led (65% product talk / 35% outcome talk)" instead of "se_selling_style: feature_seller (65% features / 35% value)."
+- Manager tile rewritten: "Feature-selling demos" → "Product-led demos."
+- Methodology drawer updated: "describes the approach the call lent itself to, not a label on the SE. The metric reflects framing on this specific call, not a permanent style."
+- Scoring prompt rewording: "never reward feature-selling" → "never reward purely product-led selling, with a note that product-led isn't categorically bad — just miscalibrated for value-buying audiences."
+- Backend aggregations: every count that checked `verdict == "feature_seller"` now also accepts `"product_led"` (and similarly `value_seller` ↔ `outcome_led`). Mixed v5 + v6 data renders the right metrics immediately — no breaking change, no migration.
+
+**Recommended action after deploy:** trigger Re-analyze under current prompts (outdated mode) so existing calls pick up the v6 labels in the analysis JSON.
 
 **Date:** 2026-06-05
 

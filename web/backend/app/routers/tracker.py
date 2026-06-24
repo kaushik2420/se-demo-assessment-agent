@@ -248,7 +248,7 @@ class TrackerPatch(BaseModel):
     details: Optional[str] = None
     status: Optional[str] = Field(default=None, pattern="^(open|closed)$")
     product: Optional[str] = Field(default=None, description="SurveySparrow | ThriveSparrow | SparrowDesk | Unknown")
-    kind: Optional[str] = Field(default=None, pattern="^(issue|request|)$")
+    kind: Optional[str] = Field(default=None, pattern="^(issue|request|enhancement|)$")
     l2_url: Optional[str] = None
     jira_url: Optional[str] = None
     requested_date: Optional[str] = None  # ISO date "YYYY-MM-DD"
