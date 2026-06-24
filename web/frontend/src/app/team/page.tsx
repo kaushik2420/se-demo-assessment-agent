@@ -13,6 +13,7 @@ type User = {
   role: string;
   is_active: boolean;
   created_at: string;
+  slack_user_id?: string | null;
 };
 
 type Me = { email: string; role: string; name: string };
@@ -59,12 +60,15 @@ export default function TeamPage() {
               Add new SEs, managers, and admins to the SE Coach portal.
             </p>
           </div>
-          {!showForm && (
-            <button onClick={() => setShowForm(true)}
-              className="px-5 py-2.5 bg-ss-navy text-white rounded-lg font-semibold hover:bg-ss-navy-dark transition">
-              + Add team member
-            </button>
-          )}
+          <div className="flex gap-2 items-center">
+            <RefreshSlackIdsButton onDone={mutate} />
+            {!showForm && (
+              <button onClick={() => setShowForm(true)}
+                className="px-5 py-2.5 bg-ss-navy text-white rounded-lg font-semibold hover:bg-ss-navy-dark transition">
+                + Add team member
+              </button>
+            )}
+          </div>
         </div>
 
         {/* One-time password — must be shown immediately after creation */}
@@ -136,6 +140,7 @@ export default function TeamPage() {
                   <th className="text-left px-6 py-3">Name</th>
                   <th className="text-left px-6 py-3">Email</th>
                   <th className="text-left px-6 py-3">Role</th>
+                  <th className="text-left px-6 py-3">Slack</th>
                   <th className="text-left px-6 py-3">Created</th>
                 </tr>
               </thead>
@@ -149,6 +154,11 @@ export default function TeamPage() {
                         {u.role}
                       </span>
                     </td>
+                    <td className="px-6 py-3 text-xs">
+                      {u.slack_user_id
+                        ? <code className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">{u.slack_user_id}</code>
+                        : <span className="text-amber-700 italic">not resolved</span>}
+                    </td>
                     <td className="px-6 py-3 text-xs text-ss-navy-soft">
                       {new Date(u.created_at).toLocaleDateString()}
                     </td>
@@ -160,6 +170,51 @@ export default function TeamPage() {
         </div>
       </main>
     </>
+  );
+}
+
+function RefreshSlackIdsButton({ onDone }: { onDone: () => void }) {
+  const [running, setRunning] = useState(false);
+
+  async function run(force: boolean) {
+    const msg = force
+      ? "Re-resolve Slack ID for EVERY user, even ones already cached? Use after a Slack workspace change."
+      : "Look up Slack IDs for users that don't have one cached yet?";
+    if (!confirm(msg)) return;
+    setRunning(true);
+    try {
+      const r: any = await api(`/team/users/refresh-slack-ids${force ? "?force=true" : ""}`, { method: "POST" });
+      const lines = [
+        `Checked: ${r.checked}`,
+        `Resolved: ${r.resolved}`,
+        `Not found in Slack: ${r.not_found}`,
+        r.errors?.length ? `Errors: ${r.errors.slice(0, 5).join("; ")}` : null,
+      ].filter(Boolean).join("\n");
+      alert(lines);
+      onDone();
+    } catch (e: any) {
+      alert(`Failed: ${e?.message || e}`);
+    } finally { setRunning(false); }
+  }
+
+  return (
+    <details className="relative">
+      <summary className="px-4 py-2.5 border border-ss-cyan-soft text-ss-navy rounded-lg text-sm hover:bg-ss-cream transition cursor-pointer list-none font-medium">
+        🔗 Slack IDs {running && "…"}
+      </summary>
+      <div className="absolute right-0 mt-1 bg-white border border-ss-cyan-soft rounded-lg shadow-lg z-10 w-72 p-2">
+        <button onClick={() => run(false)}
+          className="w-full text-left px-3 py-2 hover:bg-ss-cream rounded text-xs text-ss-navy">
+          Backfill missing only
+          <div className="text-[10px] text-ss-navy-soft">Resolves users with no cached Slack ID</div>
+        </button>
+        <button onClick={() => run(true)}
+          className="w-full text-left px-3 py-2 hover:bg-amber-50 rounded text-xs text-amber-800 mt-1">
+          Force re-resolve all
+          <div className="text-[10px] text-amber-700">Re-looks-up everyone, even cached ones</div>
+        </button>
+      </div>
+    </details>
   );
 }
 

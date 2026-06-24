@@ -538,6 +538,16 @@ function StalenessRunCard() {
                 {" · "}Skipped (cooldown): {result.skipped_cooldown ?? 0}
                 {" · "}Channel: <code>{result.channel_id || "—"}</code>
               </div>
+              {(result.se_tagged != null || result.se_not_in_slack != null) && (
+                <div className="mt-1.5 text-ss-navy-soft">
+                  SE @-tagged: <strong className="text-ss-navy">{result.se_tagged ?? 0}</strong>
+                  {result.se_not_in_slack > 0 && (
+                    <span>
+                      {" · "}<strong className="text-amber-700">{result.se_not_in_slack}</strong> SE email{result.se_not_in_slack === 1 ? "" : "s"} not found in Slack workspace (shown as plain name)
+                    </span>
+                  )}
+                </div>
+              )}
               {result.errors?.length > 0 && (
                 <details className="mt-2 cursor-pointer">
                   <summary className="font-semibold text-red-700">

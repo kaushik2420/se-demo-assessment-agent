@@ -423,27 +423,37 @@ def _kind_label(kind: Optional[str]) -> str:
     }.get(kind.lower(), kind.title())
 
 
-def _format_reminder_message(row: TrackerRequest, days_stale: int) -> str:
-    """Build the structured 10-field stale-ticket message in Slack mrkdwn."""
+def _format_reminder_message(row: TrackerRequest, days_stale: int,
+                             se_slack_id: Optional[str] = None) -> str:
+    """Build the structured 10-field stale-ticket message in Slack mrkdwn.
+
+    se_slack_id (when supplied) is rendered as `<@U0123>` so Slack actually
+    notifies the SE and highlights the mention. Falls back to the plain SE
+    name when we couldn't resolve their Slack user ID (e.g. they're not in
+    the workspace or the email doesn't match a Slack account)."""
     raised = row.requested_date.strftime("%Y-%m-%d") if row.requested_date else "—"
     eta = row.eta.strftime("%Y-%m-%d") if row.eta else "—"
     last_upd = row.last_updated_at.strftime("%Y-%m-%d") if row.last_updated_at else "—"
-    slack_url = row.slack_url or "—"
-    l2 = row.l2_url or "—"
-    jira = row.jira_url or "—"
     engineer = row.engineer_name or "—"
-    se_name = row.se_name or "—"
     details = (row.details or "—").strip()
 
-    # Slack hides URLs from "<...>" wrappers and renders them as link previews;
-    # for the URL fields we want them visible AND clickable, so we leave them
-    # bare for the simple "—" case and use the <url|text> form when set.
+    # Tag the SE if we resolved their Slack ID; otherwise show the plain name
+    # with the email in parens so it's still actionable for whoever sees it.
+    if se_slack_id:
+        se_display = f"<@{se_slack_id}>"
+    elif row.se_name:
+        se_display = row.se_name
+        if row.se_email:
+            se_display += f" ({row.se_email})"
+    else:
+        se_display = "—"
+
     def _link_or_dash(url: str | None, text: str = "open") -> str:
-        return f"<{url}|{text}>" if url and url != "—" else "—"
+        return f"<{url}|{text}>" if url else "—"
 
     return (
         f":hourglass_flowing_sand: *Stale tracker ticket — no update in {days_stale} days*\n\n"
-        f"*1. SE Name:* {se_name}\n"
+        f"*1. SE Name:* {se_display}\n"
         f"*2. Ticket raised date:* {raised}\n"
         f"*3. Slack channel URL:* {_link_or_dash(row.slack_url, 'open thread')}\n"
         f"*4. Description of the ticket:* {details}\n"
@@ -475,6 +485,8 @@ def check_staleness_and_remind() -> dict:
         "checked": 0, "reminded": 0, "skipped_cooldown": 0,
         "channel_id": SLACK_TRACKER_CHANNEL_ID,
         "threshold_days": STALENESS_DAYS,
+        "se_tagged": 0,
+        "se_not_in_slack": 0,
         "errors": [],
     }
     db = SessionLocal()
@@ -487,19 +499,55 @@ def check_staleness_and_remind() -> dict:
         stats["checked"] = len(rows)
 
         slack = SlackClient()
+        # In-loop cache (just for cases where multiple stale tickets share an
+        # SE who's not yet in our User table) — most lookups now come from the
+        # cached User.slack_user_id column, populated once via the Team page
+        # backfill button or auto on user creation.
+        slack_id_cache: dict[str, Optional[str]] = {}
+
+        def _resolve_se(email: Optional[str]) -> Optional[str]:
+            if not email:
+                return None
+            key = email.lower().strip()
+            # 1) Check the persistent cache on User row first
+            user = db.query(User).filter(User.email == key).first()
+            if user and user.slack_user_id:
+                return user.slack_user_id
+            # 2) Fall through to in-loop cache (covers multiple stale rows for
+            #    same SE who isn't in our User table)
+            if key in slack_id_cache:
+                return slack_id_cache[key]
+            # 3) Last resort: hit the Slack API and persist if we found one
+            uid = _find_user_id_by_email(key)
+            slack_id_cache[key] = uid
+            if user and uid and not user.slack_user_id:
+                user.slack_user_id = uid
+                try:
+                    db.commit()
+                    print(f"[tracker.stale] cached slack_user_id for {user.email}: {uid}")
+                except Exception:
+                    db.rollback()
+            return uid
+
         for row in rows:
             if row.reminder_sent_at and row.reminder_sent_at > cooldown:
                 stats["skipped_cooldown"] += 1
                 continue
             try:
                 days_stale = (now - row.last_updated_at).days
-                text = _format_reminder_message(row, days_stale)
+                se_slack_id = _resolve_se(row.se_email)
+                if se_slack_id:
+                    stats["se_tagged"] += 1
+                elif row.se_email:
+                    stats["se_not_in_slack"] += 1
+                text = _format_reminder_message(row, days_stale, se_slack_id=se_slack_id)
                 slack.post_message(SLACK_TRACKER_CHANNEL_ID, text)
                 row.reminder_sent_at = now
                 db.commit()
                 stats["reminded"] += 1
                 print(f"[tracker.stale] reminded row #{row.id} ({days_stale}d stale) → "
-                      f"channel {SLACK_TRACKER_CHANNEL_ID}")
+                      f"channel {SLACK_TRACKER_CHANNEL_ID} "
+                      f"(SE tagged: {'yes' if se_slack_id else 'no'})")
             except Exception as e:
                 db.rollback()
                 err_msg = str(e)

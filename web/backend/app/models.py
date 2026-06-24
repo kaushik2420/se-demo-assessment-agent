@@ -21,9 +21,13 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(32), nullable=False, default="se")  # se | manager | ceo | admin
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default="se")  # se | manager | ceo | bu_head | admin
     pwd_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Cached Slack user ID (e.g. "U01234567") looked up once via users.lookupByEmail.
+    # Used to render @-mentions in stale-ticket reminders + future Slack messaging.
+    # Refreshable via the Team page backfill button if it ever drifts.
+    slack_user_id: Mapped[Optional[str]] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     calls: Mapped[list["Call"]] = relationship(back_populates="se", cascade="all, delete-orphan")

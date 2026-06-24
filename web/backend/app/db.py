@@ -73,6 +73,12 @@ def init_db():
             conn.execute(text(
                 "ALTER TABLE tracker_requests ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP WITH TIME ZONE"
             ))
+            # Cached Slack user ID per user — populated by /team/users/refresh-slack-ids
+            # backfill button or auto on user creation, used for @-mentions in
+            # stale-ticket reminders.
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS slack_user_id VARCHAR(32)"
+            ))
             # Analysis lifecycle tracking on calls — added so the SE sees actual
             # progress vs failure instead of an infinite 'Analyzing…' spinner
             # when the background worker crashes.

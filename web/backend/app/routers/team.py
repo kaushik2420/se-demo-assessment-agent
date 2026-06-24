@@ -13,6 +13,7 @@ navigating away.
 
 from __future__ import annotations
 
+import os
 import secrets
 import string
 from datetime import datetime, timezone
@@ -61,6 +62,7 @@ class UserListItem(BaseModel):
     role: str
     is_active: bool
     created_at: str
+    slack_user_id: Optional[str] = None
 
 
 # ----------------------------------------------------------------------------
@@ -88,6 +90,7 @@ def list_users(db: Session = Depends(get_db)):
             id=u.id, email=u.email, name=u.name, role=u.role,
             is_active=u.is_active,
             created_at=u.created_at.isoformat(),
+            slack_user_id=u.slack_user_id,
         )
         for u in rows
     ]
@@ -163,6 +166,44 @@ def notion_backfill(
         except Exception as e:
             stats["errors"].append(f"{c.prospect_company}: {e}")
 
+    return stats
+
+
+@router.post("/users/refresh-slack-ids",
+             dependencies=[Depends(require_role("admin"))])
+def refresh_slack_ids(force: bool = False, db: Session = Depends(get_db)):
+    """Backfill or refresh the cached Slack user ID for every user.
+
+    By default only users with an empty slack_user_id are looked up — cheap
+    and idempotent. Pass `?force=true` to re-resolve every user (e.g. after
+    a workspace migration). Each user requires one Slack `users.lookupByEmail`
+    call; rate limit on that endpoint is ~50/min, comfortable for any team
+    size we care about."""
+    from app.services.slack_tracker import _find_user_id_by_email
+
+    if not os.getenv("SLACK_BOT_TOKEN"):
+        return {"ok": False, "reason": "SLACK_BOT_TOKEN not set"}
+
+    q = db.query(User)
+    if not force:
+        q = q.filter(User.slack_user_id.is_(None))
+    candidates = q.all()
+
+    stats: dict = {"checked": len(candidates), "resolved": 0,
+                   "not_found": 0, "errors": [], "force": force}
+    for u in candidates:
+        try:
+            uid = _find_user_id_by_email(u.email)
+            if uid:
+                u.slack_user_id = uid
+                stats["resolved"] += 1
+            else:
+                stats["not_found"] += 1
+                stats["errors"].append(f"{u.email}: no Slack user found")
+        except Exception as e:
+            stats["errors"].append(f"{u.email}: {e}")
+    db.commit()
+    print(f"[team.refresh_slack_ids] {stats}")
     return stats
 
 
@@ -254,12 +295,26 @@ def create_user(
                             f"A user with email {email} already exists.")
 
     pwd = _gen_password()
+    # Best-effort Slack user-ID lookup at creation time so the first stale
+    # reminder for this user can @-mention them without an extra API call.
+    slack_user_id = None
+    try:
+        from app.services.slack_tracker import _find_user_id_by_email
+        slack_user_id = _find_user_id_by_email(email)
+        if slack_user_id:
+            print(f"[team.create_user] resolved slack_user_id for {email}: {slack_user_id}")
+        else:
+            print(f"[team.create_user] no Slack user found for {email} — backfill later if needed")
+    except Exception as e:
+        print(f"[team.create_user] slack lookup failed for {email}: {e}")
+
     user = User(
         email=email,
         name=req.name.strip(),
         role=req.role,
         pwd_hash=hash_password(pwd),
         is_active=True,
+        slack_user_id=slack_user_id,
         created_at=datetime.now(timezone.utc),
     )
     db.add(user)
