@@ -117,7 +117,12 @@ export default function TrackerPage() {
           </button>
         </div>
 
-        {me?.role === "admin" && <TrackerReextractCard />}
+        {me?.role === "admin" && (
+          <>
+            <TrackerReextractCard />
+            <StalenessRunCard />
+          </>
+        )}
 
         <div className="flex gap-3 mb-4 items-center text-sm">
           <span className="text-ss-navy-soft">Filter:</span>
@@ -473,6 +478,83 @@ function Label({ children }: { children: React.ReactNode }) {
     <label className="block text-xs font-semibold text-ss-navy-soft uppercase tracking-wider mb-1.5">
       {children}
     </label>
+  );
+}
+
+function StalenessRunCard() {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  async function run() {
+    if (!confirm("Send stale-ticket reminders to Slack now? (open rows untouched 7+ days)")) return;
+    setRunning(true); setResult(null);
+    try {
+      const r = await api<any>("/tracker/staleness/run-now", { method: "POST" });
+      setResult(r);
+    } catch (e: any) {
+      setResult({ ok: false, error: String(e?.message || e) });
+    } finally { setRunning(false); }
+  }
+
+  return (
+    <div className="bg-white border border-ss-cyan-soft rounded-xl p-5 mb-6">
+      <div className="flex justify-between items-start gap-4">
+        <div className="flex-1">
+          <h2 className="font-semibold text-ss-navy mb-1">Stale-ticket reminders → Slack channel</h2>
+          <p className="text-xs text-ss-navy-soft">
+            Runs daily at 09:00 UTC by default. Click to trigger immediately — posts one structured
+            message per open ticket untouched for 7+ days to the configured Slack channel.
+            Cooldown rule still applies: a ticket reminded in the last 3 days is skipped.
+          </p>
+        </div>
+        <button onClick={run} disabled={running}
+          className="px-4 py-2 bg-ss-navy text-white rounded text-sm font-semibold hover:bg-ss-navy-dark disabled:opacity-50 transition flex-shrink-0">
+          {running ? "Sending…" : "Send reminders now"}
+        </button>
+      </div>
+
+      {result && (
+        <div className={`mt-3 text-xs rounded p-3 border ${
+          result.ok === false ? "bg-red-50 border-red-200 text-red-900"
+                              : "bg-ss-cream border-ss-cyan-soft text-ss-navy"
+        }`}>
+          {result.ok === false ? (
+            <div>
+              <div className="font-semibold mb-1">Run blocked</div>
+              <div>{result.reason || result.error}</div>
+              {result.reason?.includes("SLACK_TRACKER_CHANNEL_ID") && (
+                <div className="mt-2 italic text-red-800">
+                  Set the env var in Render → service → Environment, then invite the bot to that channel with <code>/invite @SE Coach</code>.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <div className="font-semibold text-ss-navy mb-1">
+                Done · {result.reminded ?? 0} reminders sent
+              </div>
+              <div>
+                Checked: {result.checked ?? 0} stale row{result.checked === 1 ? "" : "s"} (≥{result.threshold_days ?? 7}d untouched)
+                {" · "}Skipped (cooldown): {result.skipped_cooldown ?? 0}
+                {" · "}Channel: <code>{result.channel_id || "—"}</code>
+              </div>
+              {result.errors?.length > 0 && (
+                <details className="mt-2 cursor-pointer">
+                  <summary className="font-semibold text-red-700">
+                    {result.errors.length} error{result.errors.length === 1 ? "" : "s"}
+                  </summary>
+                  <ul className="ml-4 mt-1.5 space-y-0.5">
+                    {result.errors.map((e: string, i: number) => (
+                      <li key={i} className="text-red-800">• {e}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

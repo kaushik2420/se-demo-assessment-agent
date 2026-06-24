@@ -138,6 +138,24 @@ def list_ses(
 
 
 # -------------------------------------------------------------------------
+# One-shot staleness reminder run (admin) — same logic as the 09:00 UTC
+# cron, but triggered immediately from the UI.
+# -------------------------------------------------------------------------
+
+@router.post("/staleness/run-now",
+             dependencies=[Depends(require_role("admin"))])
+def staleness_run_now():
+    """Trigger the staleness reminder cron immediately. Posts one structured
+    message per stale row to SLACK_TRACKER_CHANNEL_ID and returns stats.
+    Useful for retrospective runs (e.g. catching up after a format change)
+    without waiting until 09:00 UTC."""
+    from app.services.slack_tracker import check_staleness_and_remind
+    result = check_staleness_and_remind()
+    print(f"[tracker.stale.manual] result: {result}")
+    return result
+
+
+# -------------------------------------------------------------------------
 # Re-extract existing rows under the v2 prompt (admin) — declared BEFORE
 # the /{item_id} catch-all so the int converter doesn't 422 these.
 # -------------------------------------------------------------------------
